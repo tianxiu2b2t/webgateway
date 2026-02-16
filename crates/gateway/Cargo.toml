@@ -4,3 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+hyper = { version = "1.8.1", features = ["full", "client"] }
+hyper-util = { version = "0.1.20", features = ["full"] }
+protocols = { path = "../protocols" }
+tokio = { version = "1.49.0", features = ["full"] }
+shared = { path = "../shared" }
+anyhow = "1.0.101"
+tracing = "0.1.44"
+utils = { path = "../utils" }
+rustls = "0.23.36"
+tokio-rustls = "0.26.4"

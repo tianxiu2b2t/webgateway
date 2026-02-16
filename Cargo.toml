@@ -1,6 +1,9 @@
 [workspace]
 members = [
     "crates/gateway",
-    "crates/dashboard"
+    "crates/dnsprovider",
+    "crates/utils",
+    "crates/shared",
+    "dashboard"
 ]
 resolver = "3"

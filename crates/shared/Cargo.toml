@@ -1,0 +1,27 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono = { version = "0.4.43", features = ["serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+sqlx = { version = "0.8.6", features = ["chrono", "postgres", "runtime-tokio"] }
+tracing = "0.1.44"
+tracing-appender = "0.2.4"
+tracing-subscriber = "0.3.22"
+url = { version = "2.5.8", features = ["serde"] }
+utils = { path = "../utils" }
+tokio_dual_stack = "0.2.0"
+tokio = "1.49.0"
+anyhow = "1.0.101"
+serde_json = "1.0.149"
+rand = "0.10.0"
+hex = "0.4.3"
+thiserror = "2.0.18"
+rcgen = "0.14.7"
+rustls = "0.23.36"
+tokio-rustls = "0.26.4"
+pem = "3.0.6"
+x509-parser = "0.18.1"
+async-trait = "0.1.89"

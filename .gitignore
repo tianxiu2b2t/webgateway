@@ -4,3 +4,7 @@
 # Added by cargo
 
 /target
+
+dashboard/config.toml
+.vscode
+node_modules
