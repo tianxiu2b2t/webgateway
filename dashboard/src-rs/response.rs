@@ -16,7 +16,7 @@ use tracing::{Level, event};
 
 // ---------- 统一的 API 响应结构 ----------
 #[derive(Debug, Clone, Serialize)]
-pub struct APIResponse<T: Serialize> {
+pub struct APIResponse<T: Serialize = ()> {
     pub status: u16,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
@@ -96,6 +96,22 @@ where
         AppError::Internal(err.into())
     }
 }
+
+
+// AppError into APIResponse
+impl From<AppError> for APIResponse {
+    fn from(err: AppError) -> Self {
+        let (status, message) = match err {
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
+            AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden".to_string()),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            AppError::Internal(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", e)),
+        };
+        Self::error(None, status.as_u16(), message)
+    }
+}
+
 
 // ---------- 请求日志中间件 ----------
 #[derive(Debug, Clone)]

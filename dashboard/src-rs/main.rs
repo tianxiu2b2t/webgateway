@@ -1,6 +1,6 @@
 use crate::{
-    auth::Authentication,
     config::{get_config, init_config},
+    database::auth::Authentication,
     foundation::CListener,
     response::wrapper_router,
 };
@@ -14,6 +14,7 @@ use tracing::{Level, event};
 
 pub mod auth;
 pub mod config;
+mod database;
 mod foundation;
 pub mod models;
 pub mod response;

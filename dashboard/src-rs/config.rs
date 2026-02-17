@@ -13,6 +13,8 @@ pub struct MainConfig {
         rename = "database_max_connections"
     )]
     pub max_connections: u32,
+    #[serde(rename = "token_expires")]
+    pub token_exp: u64,
 }
 
 pub static CONFIG: OnceLock<MainConfig> = OnceLock::new();
