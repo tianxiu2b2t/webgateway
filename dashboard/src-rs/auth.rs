@@ -1,6 +1,10 @@
 use std::time::SystemTime;
 
-use axum::{Router, extract::Json, routing::{get, post}};
+use axum::{
+    Router,
+    extract::Json,
+    routing::{get, post},
+};
 use shared::database::get_database;
 
 use crate::{
@@ -15,7 +19,7 @@ mod jwt;
 mod totp;
 
 pub use foundation::{DEFAULT_ADMIN_USERNAME, generate_random_secret};
-pub use jwt::{sign_jwt, get_user_info_from_verify_jwt};
+pub use jwt::{get_user_info_from_verify_jwt, sign_jwt};
 pub use totp::get_totp_code;
 
 pub async fn login(Json(body): Json<AuthPostBody>) -> APIResponse<AuthResponse> {
@@ -45,14 +49,14 @@ async fn inner_login(body: AuthPostBody) -> APIResponse<AuthResponse> {
     }
 }
 
-pub async fn info(
-    AuthJWTInfoExtract(info): AuthJWTInfoExtract,
-) -> APIResponse<AuthResponseInfo> {
+pub async fn info(AuthJWTInfoExtract(info): AuthJWTInfoExtract) -> APIResponse<AuthResponseInfo> {
     APIResponse::ok(AuthResponseInfo {
         username: info.user.username,
     })
 }
 
 pub fn get_router() -> Router {
-    Router::new().route("/login", post(login)).route("/", get(info))
+    Router::new()
+        .route("/login", post(login))
+        .route("/", get(info))
 }

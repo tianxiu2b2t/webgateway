@@ -97,7 +97,6 @@ where
     }
 }
 
-
 // AppError into APIResponse
 impl From<AppError> for APIResponse {
     fn from(err: AppError) -> Self {
@@ -106,12 +105,14 @@ impl From<AppError> for APIResponse {
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden".to_string()),
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            AppError::Internal(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", e)),
+            AppError::Internal(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Internal server error: {}", e),
+            ),
         };
         Self::error(None, status.as_u16(), message)
     }
 }
-
 
 // ---------- 请求日志中间件 ----------
 #[derive(Debug, Clone)]

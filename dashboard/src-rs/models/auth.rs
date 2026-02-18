@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use shared::objectid::ObjectId;
 use sqlx::{FromRow, Row, postgres::PgRow};
 
-use crate::{auth::get_user_info_from_verify_jwt, response::{APIResponse, AppError}};
+use crate::{
+    auth::get_user_info_from_verify_jwt,
+    response::{APIResponse, AppError},
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuthPostBody {
@@ -62,21 +65,26 @@ pub struct AuthJWTInfo {
     pub jwt: AuthJWT,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct AuthJWTInfoExtract(pub AuthJWTInfo);
 
-impl<S> FromRequestParts<S> for AuthJWTInfoExtract where S: Send + Sync {
+impl<S> FromRequestParts<S> for AuthJWTInfoExtract
+where
+    S: Send + Sync,
+{
     type Rejection = APIResponse<()>;
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        _: &S,
-    ) -> Result<Self, Self::Rejection> {
-        let authorization = parts.headers.get("Authorization").ok_or(AppError::Unauthorized)?;
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        let authorization = parts
+            .headers
+            .get("Authorization")
+            .ok_or(AppError::Unauthorized)?;
         // remove "Bearer " from the header
         let token = authorization.to_str().unwrap().replace("Bearer ", "");
-        let info = get_user_info_from_verify_jwt(&token).await.ok().ok_or(AppError::Unauthorized)?;
+        let info = get_user_info_from_verify_jwt(&token)
+            .await
+            .ok()
+            .ok_or(AppError::Unauthorized)?;
         Ok(Self(info))
     }
 }

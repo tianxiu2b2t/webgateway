@@ -1,4 +1,3 @@
-// import 'ky';
 import ky from 'ky';
 import type { APIResponse } from './types';
 import { createRouter, createWebHistory } from 'vue-router';

@@ -156,7 +156,7 @@
 //         "#)
 //         .fetch_one(&self.pool)
 //         .await?;
-        
+
 //         let id = row.get::<ObjectId, _>("id");
 //         self.get_user_from_id(&id).await
 //     }
@@ -252,23 +252,29 @@ impl Authentication for Database {
         .await?;
 
         // 检查是否存在用户，若无则创建默认管理员
-        let first_user = match self.get_first_user().await {
+        let _ = match self.get_first_user().await {
             Ok(user) => user,
             Err(_) => {
                 event!(Level::INFO, "No users found, creating default admin");
                 let secret = generate_random_secret();
-                self.create_user(DEFAULT_ADMIN_USERNAME.as_str(), &secret).await?
+                self.create_user(DEFAULT_ADMIN_USERNAME.as_str(), &secret)
+                    .await?
             }
         };
 
-        if !first_user.bound {
-            // 此处只提示管理员绑定，不打印 TOTP 码到控制台（生产环境应通过安全渠道发送）
-            event!(Level::INFO, 
-                "Admin user '{}' is not bound. Please bind TOTP authenticator.",
-                first_user.username
-            );
-            println!("Admin user '{}' totp code: {}", first_user.username, get_totp_code(&first_user.username, first_user.totp_secret)?);
-        }
+        // if !first_user.bound {
+        //     // 此处只提示管理员绑定，不打印 TOTP 码到控制台（生产环境应通过安全渠道发送）
+        //     event!(
+        //         Level::INFO,
+        //         "Admin user '{}' is not bound. Please bind TOTP authenticator.",
+        //         first_user.username
+        //     );
+        //     println!(
+        //         "Admin user '{}' totp code: {}",
+        //         first_user.username,
+        //         get_totp_code(&first_user.username, first_user.totp_secret)?
+        //     );
+        // }
 
         Ok(())
     }

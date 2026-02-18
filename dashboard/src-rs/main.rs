@@ -10,12 +10,14 @@ use shared::{
     listener::CustomDualStackTcpListener,
     logger::LoggerConfig,
 };
+use tokio::signal::ctrl_c;
 use tracing::{Level, event};
 
 pub mod auth;
 pub mod config;
 mod database;
 mod foundation;
+pub mod mnt;
 pub mod models;
 pub mod response;
 
@@ -40,7 +42,29 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(index))
         .nest("/auth", auth::get_router());
 
-    axum::serve(CListener::from(listener), wrapper_router(router)).await?;
+    let web = tokio::spawn(async move {
+        let r = axum::serve(CListener::from(listener), wrapper_router(router)).await;
+        if let Err(e) = r {
+            event!(Level::ERROR, "Error while serving: {}", e);
+        }
+    });
+
+    let mnt = tokio::spawn(async move {
+        // unix for mgt
+        let res = mnt::init().await;
+        if let Err(e) = res {
+            event!(Level::ERROR, "Error while serving: {}", e);
+        }
+    });
+
+    match ctrl_c().await {
+        Ok(()) => {
+            web.abort();
+            mnt.abort();
+            event!(Level::INFO, "Dashboard API shutting down")
+        },
+        Err(e) => event!(Level::ERROR, "Dashboard API failed to shut down: {}", e),
+    };
 
     Ok(())
 }
