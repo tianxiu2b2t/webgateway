@@ -34,8 +34,8 @@ fn main() -> Result<()> {
     let mut stream = UnixStream::connect(&args.socket)?;
 
     // 2. 根据命令行参数构造请求
-    let (request_content, request_type_name) = match args.request {
-        RequestType::AdminTotp => (ClientRequestContent::AdminTOTP, "AdminTOTP"),
+    let request_content = match args.request {
+        RequestType::AdminTotp => ClientRequestContent::AdminTOTP,
     };
 
     // 生成一个请求 ID（实际应用中应使用唯一 ID，这里简单使用固定值 1）
