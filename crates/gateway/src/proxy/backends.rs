@@ -152,6 +152,7 @@ impl BackendConnectionPoolConfig {
 }
 
 // ---------- 连接池核心 ----------
+#[derive(Debug)]
 pub struct BackendConnectionPool {
     config: BackendConnectionPoolConfig,
     idle: Mutex<VecDeque<BackendConnection>>, // 空闲连接队列

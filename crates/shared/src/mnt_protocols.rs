@@ -1,4 +1,7 @@
-use std::{io::{Read, Write}, os::unix::net::UnixStream};
+use std::{
+    io::{Read, Write},
+    os::unix::net::UnixStream,
+};
 
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -33,9 +36,12 @@ pub struct ServerResponse {
     pub error: Option<String>,
 }
 
-pub trait AsyncZigZagVarint<'a>: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Sync
+pub trait AsyncZigZagVarint<'a>:
+    tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Sync
 {
-    fn read_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(&'a mut self) -> impl Future<Output = Result<T, std::io::Error>>;
+    fn read_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(
+        &'a mut self,
+    ) -> impl Future<Output = Result<T, std::io::Error>>;
     fn write_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(
         &'a mut self,
         value: T,
@@ -43,9 +49,10 @@ pub trait AsyncZigZagVarint<'a>: tokio::io::AsyncRead + tokio::io::AsyncWrite + 
 }
 
 // UnixStream
-impl<'a> AsyncZigZagVarint<'a> for tokio::net::UnixStream
-{
-    async fn read_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(&'a mut self) -> Result<T, std::io::Error> {
+impl<'a> AsyncZigZagVarint<'a> for tokio::net::UnixStream {
+    async fn read_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(
+        &'a mut self,
+    ) -> Result<T, std::io::Error> {
         let size = size_of::<T>() * 8;
         let mut result = T::zero();
         let mut shift = 0;
@@ -81,7 +88,10 @@ impl<'a> AsyncZigZagVarint<'a> for tokio::net::UnixStream
         Ok(decoded)
     }
 
-    async fn write_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(&'a mut self, value: T) -> Result<(), std::io::Error> {
+    async fn write_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(
+        &'a mut self,
+        value: T,
+    ) -> Result<(), std::io::Error> {
         let bits = std::mem::size_of::<T>() * 8;
         let shift = bits - 1;
         let mut n = (value << 1) ^ (value >> shift); // ZigZag encoding, still type T, but non-negative
@@ -102,14 +112,21 @@ impl<'a> AsyncZigZagVarint<'a> for tokio::net::UnixStream
 
 pub trait SyncZigZagVarint: std::io::Read + std::io::Write {
     /// 从流中读取一个 ZigZag 编码的 varint，并解码为无符号整数 T
-    fn read_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(&mut self) -> Result<T, std::io::Error>;
+    fn read_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(
+        &mut self,
+    ) -> Result<T, std::io::Error>;
 
     /// 将无符号整数 T 进行 ZigZag 编码后写入流
-    fn write_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(&mut self, value: T) -> Result<(), std::io::Error>;
+    fn write_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(
+        &mut self,
+        value: T,
+    ) -> Result<(), std::io::Error>;
 }
 
 impl SyncZigZagVarint for UnixStream {
-    fn read_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(&mut self) -> Result<T, std::io::Error> {
+    fn read_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(
+        &mut self,
+    ) -> Result<T, std::io::Error> {
         let size = std::mem::size_of::<T>() * 8;
         let mut result = T::zero();
         let mut shift = 0;
@@ -143,7 +160,10 @@ impl SyncZigZagVarint for UnixStream {
         Ok(decoded)
     }
 
-    fn write_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(&mut self, value: T) -> Result<(), std::io::Error> {
+    fn write_zigzag_varint<T: num_traits::PrimInt + num_traits::Unsigned>(
+        &mut self,
+        value: T,
+    ) -> Result<(), std::io::Error> {
         let bits = std::mem::size_of::<T>() * 8;
         let shift = bits - 1;
         // ZigZag 编码：对于有符号整数， (value << 1) ^ (value >> (bits-1))

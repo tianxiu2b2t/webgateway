@@ -1,6 +1,7 @@
 <template>
     <button
         class="button"
+        :class="{ reverse: props.reverseColor }"
         :type="props.type"
         ref="innerRef"
         :disabled="props.processing"
@@ -21,12 +22,11 @@ import Loading from './Loading.vue';
 
 const props = defineProps<{
     type?: 'button' | 'submit' | 'reset';
-    click: (...args: any) => void;
     processing?: boolean;
+    reverseColor?: boolean;
 }>();
 const innerRef = ref<HTMLButtonElement>();
 onMounted(() => {
-    innerRef.value?.addEventListener('click', props.click);
     innerRef.value?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             innerRef.value?.click();
@@ -43,13 +43,20 @@ onMounted(() => {
 :root.dark {
     --btn-cbg: var(--main-color);
     --btn-disabled: rgba(255, 255, 255, 0.12);
+    /* color: var(--variant-textColor);
+    background-color: var(--variant-textBg); */
+}
+:root .button:hover {
+    --btn-cbg: rgb(10, 138, 135);
+}
+:root.dark .button:hover {
+    --btn-cbg: rgb(170, 146, 125);
+}
+.button.reverse {
+    color: var(--btn-cbg);
+    background-color: var(--dark-1-color);
 }
 
-@media (hover: hover) {
-    :root.dark .button:hover {
-        --btn-cbg: rgb(170, 146, 125);
-    }
-}
 .button {
     display: inline-flex;
     -webkit-box-align: center;
@@ -74,7 +81,6 @@ onMounted(() => {
     box-shadow: none;
     width: 100%;
     outline: 0px;
-    margin: 24px 0px 0px;
     text-decoration: none;
     padding: 6px 16px;
     border-width: 0px;

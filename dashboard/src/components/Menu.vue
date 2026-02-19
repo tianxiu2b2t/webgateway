@@ -27,6 +27,8 @@
                 <SvgIcon
                     name="menu-arrow"
                     class="arrow"
+                    width=""
+                    height=""
                     v-if="item.subMenu"
                 ></SvgIcon>
             </div>
@@ -112,6 +114,8 @@
     }
 }
 .menu-item .icon-container {
+    width: 16px;
+    height: 16px;
     min-width: 0px;
     margin-right: 12px;
 }
@@ -315,6 +319,7 @@ import SvgIcon from './SvgIcon.vue';
 import { router } from '../constant';
 const props = defineProps<{
     menuItems: MenuItem[];
+    initRoutes?: boolean;
 }>();
 const menuItemRefs = ref<Record<number, HTMLDivElement>>({});
 const subItemContainerRefs = ref<Record<number, HTMLDivElement>>({});
@@ -385,14 +390,17 @@ function handleSubItem(idx: number, subIdx: number) {
 }
 onMounted(() => {
     routeUpdate.value = false;
+    const initRoute: boolean = props.initRoutes || false;
     const route = router.currentRoute.value;
     const path = route.path.split('/')[1];
     const subPath = route.path.split('/')[2];
-    const idx = props.menuItems.findIndex((item) => item.to == path);
-    if (idx == -1) {
+    const bidx = props.menuItems.findIndex((item) => item.to == path);
+    const idx = initRoute && bidx == -1 ? 0 : bidx;
+    if (!initRoute && bidx == -1) {
         routeUpdate.value = true;
         return;
     }
+    routeUpdate.value = true;
     handleItem(idx);
     if (subPath) {
         const subIdx = props.menuItems[idx]?.subMenu?.findIndex(

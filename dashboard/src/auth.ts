@@ -54,3 +54,8 @@ export async function checkToken(): Promise<boolean> {
         return false;
     }
 }
+
+export async function logout() {
+    localStorage.removeItem('token');
+    router.push('/login');
+}

@@ -1,15 +1,22 @@
 use std::path::PathBuf;
 
-use shared::{database::get_database, mnt_protocols::{AsyncZigZagVarint, ClientRequest, ClientRequestContent, MNT_PATH, ServerResponse, ServerResponseContent}};
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{UnixListener, UnixStream}};
-use tracing::event;
 use anyhow::Result;
+use shared::{
+    database::get_database,
+    mnt_protocols::{
+        AsyncZigZagVarint, ClientRequest, ClientRequestContent, MNT_PATH, ServerResponse,
+        ServerResponseContent,
+    },
+};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{UnixListener, UnixStream},
+};
+use tracing::event;
 
 use crate::{auth::get_totp_code, database::auth::Authentication};
 
-pub struct AutoCleanUnixListener(
-    PathBuf
-);
+pub struct AutoCleanUnixListener(PathBuf);
 
 impl Drop for AutoCleanUnixListener {
     fn drop(&mut self) {
@@ -27,12 +34,12 @@ pub async fn init() -> anyhow::Result<()> {
     loop {
         let (stream, addr) = listener.accept().await?;
         event!(tracing::Level::INFO, "new unix connection: {addr:?}");
-        tokio::spawn(async move { 
+        tokio::spawn(async move {
             let res = handle(stream).await;
             if let Err(e) = res {
                 event!(tracing::Level::DEBUG, "handle error: {e:?}");
             }
-         });
+        });
     }
 }
 
@@ -45,12 +52,16 @@ async fn handle(mut stream: UnixStream) -> Result<()> {
         // TODO: handle request
         let res = handle_req(data.content).await;
         let response = match res {
-            Ok(res) => ServerResponse { id: data.id, content: Some(res), error: None },
+            Ok(res) => ServerResponse {
+                id: data.id,
+                content: Some(res),
+                error: None,
+            },
             Err(e) => ServerResponse {
                 id: data.id,
                 content: None,
                 error: Some(e.to_string()),
-            }
+            },
         };
         let buf = serde_json::to_vec(&response)?;
         stream.write_zigzag_varint::<usize>(buf.len()).await?;
@@ -63,7 +74,10 @@ async fn handle_req(req: ClientRequestContent) -> Result<ServerResponseContent> 
         ClientRequestContent::AdminTOTP => {
             let user = get_database().get_first_user().await?;
             let code = get_totp_code(&user.username, user.totp_secret)?;
-            Ok(ServerResponseContent::AdminTOTP { user: user.username.to_string(), totp: code })
+            Ok(ServerResponseContent::AdminTOTP {
+                user: user.username.to_string(),
+                totp: code,
+            })
         }
     }
 }

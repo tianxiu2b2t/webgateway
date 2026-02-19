@@ -5,7 +5,7 @@ use axum::{
     Router,
     body::Body,
     extract::Request,
-    http::{StatusCode, header::CONTENT_TYPE},
+    http::{HeaderMap, StatusCode, header::CONTENT_TYPE},
     middleware::{self, Next},
     response::{IntoResponse, Response},
 };
@@ -14,9 +14,8 @@ use serde::Serialize;
 use tower_http::catch_panic::CatchPanicLayer;
 use tracing::{Level, event};
 
-// ---------- 统一的 API 响应结构 ----------
 #[derive(Debug, Clone, Serialize)]
-pub struct APIResponse<T: Serialize = ()> {
+struct InnerAPIResponse<T: Serialize = ()> {
     pub status: u16,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
@@ -24,12 +23,34 @@ pub struct APIResponse<T: Serialize = ()> {
     pub data: Option<T>,
 }
 
+// ---------- 统一的 API 响应结构 ----------
+#[derive(Debug, Clone)]
+pub struct APIResponse<T: Serialize = ()> {
+    inner: InnerAPIResponse<T>,
+    pub headers: HeaderMap,
+}
+
 impl<T: Serialize> APIResponse<T> {
+    pub fn status(&self) -> u16 {
+        self.inner.status
+    }
+
+    pub fn message(&self) -> Option<&str> {
+        self.inner.message.as_deref()
+    }
+
+    pub fn data(&self) -> Option<&T> {
+        self.inner.data.as_ref()
+    }
+
     pub fn new(data: Option<T>, status: u16, message: Option<&str>) -> Self {
         Self {
-            data,
-            status,
-            message: message.map(|m| m.to_string()),
+            inner: InnerAPIResponse {
+                status,
+                data,
+                message: message.map(|s| s.to_string()),
+            },
+            headers: HeaderMap::new(),
         }
     }
 
@@ -51,13 +72,18 @@ impl<T: Serialize> APIResponse<T> {
 
 impl<T: Serialize> IntoResponse for APIResponse<T> {
     fn into_response(self) -> Response<Body> {
-        let status = StatusCode::from_u16(self.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-        let body = serde_json::to_string(&self).unwrap();
-        Response::builder()
-            .status(status)
-            .header(CONTENT_TYPE, "application/json")
-            .body(Body::from(body))
-            .unwrap()
+        let status =
+            StatusCode::from_u16(self.inner.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let body = serde_json::to_string(&self.inner).unwrap();
+        let mut headers = self.headers.clone();
+        headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
+        let mut builder = Response::builder().status(status);
+
+        let response_headers = builder.headers_mut();
+        if let Some(response_headers) = response_headers {
+            *response_headers = headers;
+        }
+        builder.body(Body::new(body)).unwrap()
     }
 }
 

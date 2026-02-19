@@ -25,7 +25,7 @@ pub use totp::get_totp_code;
 pub async fn login(Json(body): Json<AuthPostBody>) -> APIResponse<AuthResponse> {
     let now = SystemTime::now();
     let res = inner_login(body).await;
-    if res.status == 200 {
+    if res.status() == 200 {
         return res;
     }
     // sleep random, maybe 2 ~ 5 sec
@@ -53,6 +53,15 @@ pub async fn info(AuthJWTInfoExtract(info): AuthJWTInfoExtract) -> APIResponse<A
     APIResponse::ok(AuthResponseInfo {
         username: info.user.username,
     })
+}
+
+pub async fn refresh_token(
+    AuthJWTInfoExtract(info): AuthJWTInfoExtract,
+) -> APIResponse<AuthResponse> {
+    match sign_jwt(&info.user.username).await {
+        Ok(res) => APIResponse::ok(res),
+        Err(e) => APIResponse::error(None, 500, e.to_string()),
+    }
 }
 
 pub fn get_router() -> Router {

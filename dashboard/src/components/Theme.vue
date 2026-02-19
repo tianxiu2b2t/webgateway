@@ -2,7 +2,6 @@
     <template v-if="props.type == 'icon'">
         <SvgIcon
             name="common-light"
-            color="#000"
             :height="props.size"
             :width="props.size"
             @click="toggleDark"
@@ -10,7 +9,6 @@
         ></SvgIcon>
         <SvgIcon
             name="common-dark"
-            color="#fff"
             :height="props.size"
             :width="props.size"
             @click="toggleLight"
@@ -34,7 +32,7 @@ const props = defineProps({
     },
     size: {
         type: String,
-        default: '36px',
+        default: '100%',
     },
 });
 </script>

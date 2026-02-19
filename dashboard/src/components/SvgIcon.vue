@@ -4,5 +4,16 @@
     </svg>
 </template>
 <script setup lang="ts">
-defineProps({ name: String, color: String, width: String, height: String });
+defineProps({
+    name: String,
+    color: String,
+    width: {
+        type: String,
+        default: '100%',
+    },
+    height: {
+        type: String,
+        default: '100%',
+    },
+});
 </script>

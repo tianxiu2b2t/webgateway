@@ -845,6 +845,7 @@ name = "gateway"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "hyper",
  "hyper-util",
  "protocols",
@@ -852,6 +853,7 @@ dependencies = [
  "shared",
  "tokio",
  "tokio-rustls",
+ "tokio_schedule",
  "tracing",
  "utils",
 ]
@@ -2230,6 +2232,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "sqlx-pg-ext-uint",
  "thiserror",
  "tokio",
  "tokio-rustls",
@@ -2458,6 +2461,15 @@ dependencies = [
  "thiserror",
  "tracing",
  "whoami",
+]
+
+[[package]]
+name = "sqlx-pg-ext-uint"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33f2fff72e0a97686ce39b9b1db05979981583cad894f4d7eca01c9142e0bd0a"
+dependencies = [
+ "sqlx",
 ]
 
 [[package]]

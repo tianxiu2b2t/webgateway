@@ -4,8 +4,8 @@
             <SvgIcon
                 name="common-menu"
                 color="var(--menu-color)"
-                height="36px"
-                width="36px"
+                height="32px"
+                width="32px"
                 @click="toggleMenu"
                 class="menu-btn"
             ></SvgIcon>
@@ -13,14 +13,21 @@
             <h2>Web Gateway</h2>
         </div>
         <div class="flex">
-            <Theme />
+            <HeaderButton><Theme /></HeaderButton>
+            <HeaderButton style="margin-left: 12px" @click="logout"
+                ><SvgIcon
+                    name="common-exit"
+                    height="22px"
+                    width="22px"
+                ></SvgIcon
+            ></HeaderButton>
         </div>
     </header>
     <div class="app-container">
         <div class="app-inner" :style="{ marginTop: `${headerHeight}px` }">
             <div class="app">
                 <div class="side" ref="sideRef">
-                    <Menu :menu-items="menu"></Menu>
+                    <Menu :menu-items="menu" :initRoutes="true"></Menu>
                 </div>
                 <div class="main">
                     <main>
@@ -32,16 +39,32 @@
     </div>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { getToken } from '../auth';
+import { onMounted, ref } from 'vue';
 import SvgIcon from '../components/SvgIcon.vue';
 import Menu, { type MenuItem } from '../components/Menu.vue';
 import Theme from '../components/Theme.vue';
+import HeaderButton from '../components/HeaderButton.vue';
+import { logout } from '../auth';
 const menu: MenuItem[] = [
     {
         title: '统计',
         to: 'statistics',
         icon: 'menu-statistics',
+    },
+    {
+        title: '网站管理',
+        to: 'websites',
+        icon: 'menu-website',
+        subMenu: [
+            {
+                title: '网站列表',
+                to: '',
+            },
+            {
+                title: '证书管理',
+                to: 'certificates',
+            },
+        ],
     },
     {
         title: '通用设置',
@@ -52,7 +75,6 @@ const menu: MenuItem[] = [
 const sideRef = ref<Element>();
 const headerRef = ref<Element>();
 
-const token = computed(() => getToken());
 const headerHeight = ref(0);
 function toggleMenu() {
     sideRef.value?.classList.toggle('hide');

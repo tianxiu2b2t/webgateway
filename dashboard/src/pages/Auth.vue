@@ -1,7 +1,7 @@
 <template>
     <div class="auth-container">
         <div class="auth-inner-container">
-            <Panel>
+            <Panel style="padding: 30px 48px">
                 <h4 class="title">
                     <span>登陆</span>
                     <p class="app-name">Web Gateway</p>
@@ -22,9 +22,10 @@
                         ></InputEdit>
                     </div>
                     <Button
+                        style="margin: 24px 0px 0px"
                         text="登陆"
                         type="submit"
-                        :click="handle"
+                        @click="handle"
                         :processing="processing"
                         >登陆</Button
                     >
@@ -48,7 +49,6 @@ const totpRef = ref();
 
 async function handle() {
     if (username.value.trim() == '') {
-        console.log(usernameRef.value?.focus);
         usernameRef.value.focus();
         return;
     }

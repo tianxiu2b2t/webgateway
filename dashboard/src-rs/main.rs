@@ -4,7 +4,6 @@ use crate::{
     foundation::CListener,
     response::wrapper_router,
 };
-use axum::routing::get;
 use shared::{
     database::{get_database, init_database},
     listener::CustomDualStackTcpListener,
@@ -20,10 +19,7 @@ mod foundation;
 pub mod mnt;
 pub mod models;
 pub mod response;
-
-async fn index() -> &'static str {
-    "Hello, World!"
-}
+pub mod router;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -39,8 +35,8 @@ async fn main() -> anyhow::Result<()> {
     );
     let listener = CustomDualStackTcpListener::new_by_port(get_config().port).await?;
     let router = axum::Router::new()
-        .route("/", get(index))
-        .nest("/auth", auth::get_router());
+        .nest("/auth", auth::get_router())
+        .nest("/", router::get_router());
 
     let web = tokio::spawn(async move {
         let r = axum::serve(CListener::from(listener), wrapper_router(router)).await;
@@ -62,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
             web.abort();
             mnt.abort();
             event!(Level::INFO, "Dashboard API shutting down")
-        },
+        }
         Err(e) => event!(Level::ERROR, "Dashboard API failed to shut down: {}", e),
     };
 

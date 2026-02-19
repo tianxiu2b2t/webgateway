@@ -47,6 +47,15 @@ export const router = createRouter({
                     path: 'settings',
                     component: () => import('./pages/Dashboard/Settings.vue'),
                 },
+                {
+                    path: 'websites',
+                    component: () => import('./pages/Dashboard/websites.vue'),
+                },
+                {
+                    path: 'websites/certificates',
+                    component: () =>
+                        import('./pages/Dashboard/websites/Certificates.vue'),
+                },
             ],
         },
     ],
@@ -54,7 +63,6 @@ export const router = createRouter({
 
 router.beforeEach(async (to, _, next) => {
     if (to.meta.requiresAuth && !(await checkToken())) {
-        console.log('fuck off');
         next('/login');
     } else {
         next();

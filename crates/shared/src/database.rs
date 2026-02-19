@@ -2,10 +2,11 @@ use std::sync::OnceLock;
 
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 
-use crate::database::certificate::InitDatabaseCertificate;
+use crate::database::{certificate::InitDatabaseCertificate, websites::DatabaseWebsiteInitializer};
 
 pub mod certificate;
 pub mod dnsprovider;
+pub mod websites;
 
 #[derive(Debug)]
 pub struct Database {
@@ -39,5 +40,6 @@ pub fn get_database() -> &'static Database {
 
 async fn inner_init_database() -> anyhow::Result<()> {
     get_database().init_certificates().await?;
+    get_database().initialize_websites().await?;
     Ok(())
 }

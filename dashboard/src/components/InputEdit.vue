@@ -11,11 +11,11 @@
                 :value="value"
                 :disabled="props.disabled"
                 :required="props.required"
+                :placeholder="placeholder"
                 :id="`ie-${id}`"
                 @focus="focus = true"
                 @blur="focus = false"
                 @input="handleInput"
-                v-bind="$attrs"
             />
             <fieldset class="inputedit-fieldset">
                 <legend class="inputedit-legend">
@@ -33,6 +33,10 @@ import { increaseInputID } from '../constant';
 const id = increaseInputID();
 const props = defineProps({
     label: {
+        type: String,
+        default: '',
+    },
+    placeholder: {
         type: String,
         default: '',
     },
@@ -60,10 +64,8 @@ const props = defineProps({
 const container = ref<HTMLDivElement>();
 const value = ref<string>('');
 const focus = ref<boolean>(false);
+const placeholder = ref<string>(props.placeholder);
 const emit = defineEmits(['update:value']);
-defineOptions({
-    inheritAttrs: false,
-});
 defineExpose({
     focus: () => {
         container.value?.querySelector('input')?.focus();
@@ -76,18 +78,24 @@ const handleInput = (e: Event) => {
     value.value = newValue;
     emit('update:value', newValue);
 };
-watch([focus, value], ([focus, value]) => {
-    const empty = isEmpty(value);
-    if (focus) {
-        container.value?.classList.add('inputedit-active');
-        container.value?.classList.add('inputedit-focus');
-    } else {
-        container.value?.classList.remove('inputedit-active');
-        if (empty) {
-            container.value?.classList.remove('inputedit-focus');
+watch(
+    [focus, value, props.placeholder],
+    ([focus, value, ph]) => {
+        const empty = isEmpty(value);
+        if (focus) {
+            container.value?.classList.add('inputedit-active');
+            container.value?.classList.add('inputedit-focus');
+            placeholder.value = (ph as string) || props.placeholder;
+        } else {
+            container.value?.classList.remove('inputedit-active');
+            if (empty) {
+                container.value?.classList.remove('inputedit-focus');
+                placeholder.value = '';
+            }
         }
-    }
-});
+    },
+    { immediate: true },
+);
 </script>
 <style>
 :root {

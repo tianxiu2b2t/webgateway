@@ -19,8 +19,8 @@
 </template>
 
 <script setup lang="ts">
-import SvgIcon from '../components/SvgIcon.vue';
-import { presentations, removePresentation } from './presentation';
+import SvgIcon from '../../components/SvgIcon.vue';
+import { presentations, removePresentation } from './index';
 </script>
 
 <style>

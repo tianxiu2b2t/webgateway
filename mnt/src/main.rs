@@ -4,7 +4,7 @@ use std::os::unix::net::UnixStream;
 use anyhow::Result;
 use clap::Parser;
 use shared::mnt_protocols::{
-    ClientRequest, ClientRequestContent, MNT_PATH, ServerResponse, SyncZigZagVarint
+    ClientRequest, ClientRequestContent, ServerResponse, SyncZigZagVarint, MNT_PATH,
 };
 use shared::objectid::ObjectId;
 

@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use sqlx::postgres::PgHasArrayType;
 use std::error::Error as StdError;
 use std::{
     fmt,
@@ -222,5 +223,11 @@ impl<'r> Decode<'r, Postgres> for ObjectId {
 impl Type<Postgres> for ObjectId {
     fn type_info() -> PgTypeInfo {
         PgTypeInfo::with_name("TEXT")
+    }
+}
+
+impl PgHasArrayType for ObjectId {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("TEXT[]")
     }
 }

@@ -27,13 +27,9 @@
     color: var(--panel-text-color);
     box-shadow: var(--panel-shadow);
     background-image: none;
-    display: flex;
-    flex-direction: column;
-    -webkit-box-align: center;
-    align-items: center;
-    width: 440px;
+    min-width: 100%;
     transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 8px;
-    padding: 30px 48px;
+    padding: 24px;
 }
 </style>
