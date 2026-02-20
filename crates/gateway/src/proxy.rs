@@ -15,7 +15,7 @@ use shared::{
     streams::{BufferStream, WrapperBufferStream},
 };
 use tokio::{net::TcpStream, sync::RwLock, task::JoinHandle};
-use tokio_rustls::{TlsAcceptor, server::TlsStream};
+use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
 use crate::proxy::backends::{BackendConnectionPool, BackendConnectionPoolConfig};

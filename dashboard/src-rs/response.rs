@@ -184,30 +184,6 @@ pub async fn logging_middleware(req: Request<Body>, next: Next) -> Response<Body
     response
 }
 
-// ---------- 全局 404 处理器 ----------
-// async fn fallback_handler(uri: axum::http::Uri) -> impl IntoResponse {
-//     AppError::NotFound(format!("No route for {}", uri))
-// }
-
-// // ---------- 业务 Handler 示例 ----------
-// async fn hello() -> Result<APIResponse<Value>, AppError> {
-//     Ok(APIResponse::ok(json!({"message": "Hello World"})))
-// }
-
-// async fn fail() -> Result<APIResponse<Value>, AppError> {
-//     Err(AppError::BadRequest("参数错误".to_string()))
-// }
-
-// async fn panic_handler() -> Result<APIResponse<Value>, AppError> {
-//     panic!("模拟 panic");
-// }
-
-// async fn internal_error() -> Result<APIResponse<Value>, AppError> {
-//     // 模拟任意库返回的 anyhow::Error
-//     let _: () = Err(anyhow::anyhow!("数据库连接失败"))?;
-//     Ok(APIResponse::ok(json!(null)))
-// }
-
 pub fn wrapper_router(router: Router) -> Router {
     router
         .layer(middleware::from_fn(logging_middleware))

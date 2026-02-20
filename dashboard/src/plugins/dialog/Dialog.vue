@@ -131,5 +131,4 @@
 
 <script lang="ts" setup>
 import Panel from '../../components/Panel.vue';
-import DialogClose from './DialogClose.vue';
 </script>

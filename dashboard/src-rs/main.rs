@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = CustomDualStackTcpListener::new_by_port(get_config().port).await?;
     let router = axum::Router::new()
         .nest("/auth", auth::get_router())
-        .nest("/", router::get_router());
+        .merge(router::get_router());
 
     let web = tokio::spawn(async move {
         let r = axum::serve(CListener::from(listener), wrapper_router(router)).await;

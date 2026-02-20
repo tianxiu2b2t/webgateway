@@ -1,5 +1,5 @@
 <template>
-    <Dialog v-for="value in dialogs"></Dialog>
+    <Dialog v-for="value in dialogs">{{ value }}</Dialog>
 </template>
 
 <script lang="ts" setup>

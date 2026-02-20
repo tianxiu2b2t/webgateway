@@ -1,7 +1,7 @@
 import ky from 'ky';
 import type { APIResponse } from './types';
 import { createRouter, createWebHistory } from 'vue-router';
-import { checkToken } from './auth';
+import { checkToken, getToken } from './auth';
 
 let inputId = 0;
 export function increaseInputID() {
@@ -23,6 +23,19 @@ export const got = ky.create({
                     resp = await response.json();
                 } catch (e) {}
                 return new Response(JSON.stringify(resp), response);
+            },
+        ],
+    },
+});
+
+export const gotWithAuth = got.extend({
+    hooks: {
+        beforeRequest: [
+            async (request) => {
+                const token = getToken();
+                if (token) {
+                    request.headers.set('Authorization', `Bearer ${token}`);
+                }
             },
         ],
     },
