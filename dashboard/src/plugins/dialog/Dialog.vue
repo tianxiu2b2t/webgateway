@@ -1,5 +1,5 @@
 <template>
-    <div class="dialog-root">
+    <div class="dialog-root" @click="click">
         <div
             class="dialog-backdrop"
             style="
@@ -8,16 +8,25 @@
             "
         ></div>
         <div class="dialog-container">
-            <Panel class="panel"
-                ><div class="dialog-header">
-                    <slot name="header"></slot>
-                </div>
+            <Panel class="panel">
+                <div class="dialog-header"><slot name="header"></slot></div>
                 <div class="dialog-content"><slot name="content"></slot></div>
                 <div class="dialog-footer"><slot name="footer"></slot></div
             ></Panel>
         </div>
     </div>
 </template>
+
+<script lang="ts" setup>
+import Panel from '../../components/Panel.vue';
+
+function click(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (target.closest('.dialog-container')) {
+        emit('close');
+    }
+}
+</script>
 
 <style>
 :root {
@@ -128,7 +137,3 @@
     padding-top: 0px;
 }
 </style>
-
-<script lang="ts" setup>
-import Panel from '../../components/Panel.vue';
-</script>

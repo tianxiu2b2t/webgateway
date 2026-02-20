@@ -1,9 +1,9 @@
 import { computed, ref, type Component } from 'vue';
 import Dialog from './Dialog.vue';
 
-const inner = ref<Component<typeof Dialog>[]>([]);
+const inner = ref<Component[]>([]);
 
-export function addDialog(dialog: Component<typeof Dialog>) {
+export function addDialog(dialog: Component) {
     inner.value.push(dialog);
 }
 
