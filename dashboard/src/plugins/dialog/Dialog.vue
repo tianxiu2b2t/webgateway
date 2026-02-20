@@ -133,6 +133,20 @@ function click(e: MouseEvent) {
 .dialog-footer + .dialog-content {
     padding-bottom: 0px;
 }
+.dialog-footer {
+    margin: 0px;
+    font-family: inherit;
+    line-height: 1.6;
+    flex: 0 0 auto;
+    font-weight: 600;
+    font-size: 16px;
+    padding: 8px;
+    display: flex;
+    -webkit-box-pack: justify;
+    justify-content: space-between;
+    -webkit-box-align: center;
+    align-items: center;
+}
 .dialog-header + .dialog-content {
     padding-top: 0px;
 }
