@@ -3,22 +3,15 @@ import Button from '../../components/Button.vue';
 </script>
 
 <template>
-    <div class="MuiStack-root css-1j66doz">
-        <div class="MuiDialogActions-root MuiDialogActions-spacing css-1vwkjbq">
-            <Button :reverse-color="true">取消</Button>
-            <!-- <button
-                class="MuiButtonBase-root MuiButton-root MuiButton-text MuiButton-textPrimary MuiButton-sizeMedium MuiButton-textSizeMedium MuiButton-colorPrimary MuiButton-root MuiButton-text MuiButton-textPrimary MuiButton-sizeMedium MuiButton-textSizeMedium MuiButton-colorPrimary css-w4kzji"
-                tabindex="0"
-                type="button"
-            >
-                取消</button
-            >--><Button>确定</Button>
+    <div class="dialog-close-root">
+        <div class="dialog-close-container">
+            <Button :reverse-color="true">取消</Button><Button>确定</Button>
         </div>
     </div>
 </template>
 
 <style>
-.css-1j66doz {
+.dialog-close-root {
     display: flex;
     flex-direction: row-reverse;
     -webkit-box-align: center;
@@ -27,7 +20,7 @@ import Button from '../../components/Button.vue';
     justify-content: space-between;
     width: 100%;
 }
-.css-1vwkjbq {
+.dialog-close-container {
     display: flex;
     -webkit-box-align: center;
     align-items: center;

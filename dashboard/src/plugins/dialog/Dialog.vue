@@ -1,14 +1,8 @@
 <template>
-    <div class="dialog-root" @click="click">
-        <div
-            class="dialog-backdrop"
-            style="
-                opacity: 1;
-                transition: opacity 225ms cubic-bezier(0.4, 0, 0.2, 1);
-            "
-        ></div>
+    <div class="dialog-root" @click="$emit('close')" ref="dialogRootRef">
+        <div class="dialog-backdrop"></div>
         <div class="dialog-container">
-            <Panel class="panel">
+            <Panel class="panel" @click.stop>
                 <div class="dialog-header"><slot name="header"></slot></div>
                 <div class="dialog-content"><slot name="content"></slot></div>
                 <div class="dialog-footer"><slot name="footer"></slot></div
@@ -18,14 +12,17 @@
 </template>
 
 <script lang="ts" setup>
+import { nextTick, onMounted, ref } from 'vue';
 import Panel from '../../components/Panel.vue';
+const dialogRootRef = ref<HTMLDivElement | null>(null);
 
-function click(e: MouseEvent) {
-    const target = e.target as HTMLElement;
-    if (target.closest('.dialog-container')) {
-        emit('close');
-    }
-}
+onMounted(() => {
+    requestAnimationFrame(() => {
+        nextTick(() => {
+            dialogRootRef.value?.classList.add('dialog-animation');
+        });
+    });
+});
 </script>
 
 <style>
@@ -42,6 +39,16 @@ function click(e: MouseEvent) {
     z-index: 1300;
     inset: 0px;
 }
+.dialog-animation .dialog-backdrop {
+    opacity: 1;
+}
+.dialog-out-animation .dialog-backdrop {
+    opacity: 0;
+}
+.dialog-out-animation .dialog-container {
+    opacity: 0;
+    transform: scale(0.8);
+}
 .dialog-backdrop {
     position: fixed;
     display: flex;
@@ -53,6 +60,8 @@ function click(e: MouseEvent) {
     background-color: rgba(0, 0, 0, 0.8);
     -webkit-tap-highlight-color: transparent;
     z-index: -1;
+    opacity: 0;
+    transition: opacity 225ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .dialog-container {
     height: 100%;
