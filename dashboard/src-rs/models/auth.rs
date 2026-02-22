@@ -97,8 +97,7 @@ pub struct AuthResponseInfo {
     pub updated_at: DateTime<Utc>,
 }
 
-#[
-    derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 
 pub struct AuthQueryInfo {
     pub user_id: ObjectId,

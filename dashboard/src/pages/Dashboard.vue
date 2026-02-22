@@ -24,12 +24,16 @@
         </div>
     </header>
     <div class="app-container">
-        <div class="app-inner" :style="{ marginTop: `${headerHeight}px` }">
+        <div class="app-inner">
             <div class="app">
-                <div class="side" ref="sideRef">
+                <div
+                    class="side"
+                    ref="sideRef"
+                    :style="{ marginTop: `${headerHeight}px` }"
+                >
                     <Menu :menu-items="menu" :initRoutes="true"></Menu>
                 </div>
-                <div class="main">
+                <div class="main" :style="{ marginTop: `${headerHeight}px` }">
                     <main>
                         <RouterView></RouterView>
                     </main>
@@ -138,10 +142,12 @@ header .spt-line {
     width: 100%;
 }
 main {
-    height: 100%;
+    height: auto;
+    padding: 16px;
+    margin-top: 8px;
 }
 .main {
-    margin: 16px;
+    margin-top: 0px;
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;

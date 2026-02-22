@@ -2,7 +2,7 @@ use anyhow::Result;
 use shared::{database::Database, objectid::ObjectId};
 use sqlx::types::Json;
 
-use crate::models::log::{Log, LogContent};
+use crate::models::log::{Log, LogAddr, LogContent};
 
 #[async_trait::async_trait]
 pub trait WebLogInitializer {
@@ -69,7 +69,7 @@ pub trait WebLogManager {
         &self,
         user_id: &ObjectId,
         content: &LogContent,
-        address: &str,
+        address: &LogAddr,
     ) -> Result<()>;
 
     async fn get_web_logs_of_total(&self) -> Result<usize>;
@@ -82,7 +82,7 @@ impl WebLogManager for Database {
         &self,
         user_id: &ObjectId,
         content: &LogContent,
-        address: &str,
+        address: &LogAddr,
     ) -> Result<()> {
         sqlx::query(
             r#"
@@ -93,7 +93,7 @@ impl WebLogManager for Database {
         .bind(ObjectId::new())
         .bind(user_id)
         .bind(Json(content))
-        .bind(address)
+        .bind(&address.0)
         .execute(&self.pool)
         .await?;
         Ok(())

@@ -6,6 +6,7 @@
 import { onMounted, ref } from 'vue';
 import Table from '../../../components/Table.vue';
 import { fetchLog, getLogTotals, getUserInfo } from '../../../api';
+import { formatDate } from '../../../utils';
 const logConfig = ref({
     total: 0,
     headers: [
@@ -36,7 +37,7 @@ async function refresh() {
             return {
                 user: (await getUserInfo(item.user_id)).username,
                 content: item.content,
-                time: item.created_at,
+                time: formatDate(item.created_at),
                 ip: item.address,
             };
         }),

@@ -29,5 +29,6 @@ import Button from '../../components/Button.vue';
     -webkit-box-pack: end;
     justify-content: flex-end;
     flex: 0 0 auto;
+    gap: 16px;
 }
 </style>

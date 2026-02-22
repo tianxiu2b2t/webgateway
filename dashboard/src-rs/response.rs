@@ -1,18 +1,25 @@
-use std::time::Instant;
+use std::{net::IpAddr, time::Instant};
 
 use anyhow::Result;
 use axum::{
     Router,
     body::Body,
-    extract::Request,
+    extract::{ConnectInfo, Request},
     http::{HeaderMap, StatusCode, header::CONTENT_TYPE},
     middleware::{self, Next},
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
 // use serde_json::{json, Value};
+use client_ip::{
+    cf_connecting_ip, cloudfront_viewer_address, fly_client_ip, rightmost_x_forwarded_for,
+    true_client_ip, x_real_ip,
+};
 use tower_http::catch_panic::CatchPanicLayer;
 use tracing::{Level, event};
+use units_formatter::time::format_duration;
+
+use crate::foundation::RemoteAddr;
 
 #[derive(Debug, Clone, Serialize)]
 struct InnerAPIResponse<T: Serialize = ()> {
@@ -148,44 +155,98 @@ pub struct ReqRecord {
     raw_path: String,
     user_agent: Option<String>,
     host: Option<String>,
-    remote_addr: String, // 可以从扩展中获取真实 IP
+    remote_addr: IpAddr, // 可以从扩展中获取真实 IP
 }
 
-pub async fn logging_middleware(req: Request<Body>, next: Next) -> Response<Body> {
-    let record = ReqRecord {
-        method: req.method().to_string(),
-        raw_path: req.uri().path().to_string(),
-        user_agent: req
-            .headers()
-            .get("user-agent")
-            .and_then(|h| h.to_str().ok())
-            .map(|s| s.to_string()),
-        host: req
-            .headers()
-            .get("host")
-            .and_then(|h| h.to_str().ok())
-            .map(|s| s.to_string()),
-        remote_addr: "".to_string(), // 实际可从 `req.extensions()` 获取
-    };
+pub async fn logging_middleware(
+    req: Request<Body>,
+    next: Next,
+) -> Response<Body> {
+    let remote_addr = req.extensions().get::<RemoteAddr>().copied();
+    let ip = IpAddr::from(remote_addr.unwrap());
+    let host = req
+        .headers()
+        .get("host")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+    let user_agent = req
+        .headers()
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+    let method = req.method().to_string();
+    let raw_path = req.uri().path().to_string();
 
     let start = Instant::now();
     let response = next.run(req).await;
     let elapsed = start.elapsed();
 
-    event!(
-        Level::INFO,
-        "{} {} {} {}ms",
-        record.method,
-        record.raw_path,
-        response.status().as_u16(),
-        elapsed.as_micros() as f64 / 1000.0 // 毫秒
-    );
+    // 固定列宽（根据实际需要调整）
+    const IPV4_W: usize = 16; // IPv6 最大长度 39
+    const IPV6_W: usize = 39;
+    const METHOD_W: usize = 6;
+    const UA_W: usize = 40;
+    const TIME_W: usize = 14;
+
+    event!(Level::INFO, "{}", {
+        let host_str = host.as_deref().unwrap_or("-");
+        let ip_str = ip.to_string();
+        let ua_str = user_agent.as_deref().unwrap_or("-");
+
+        let ip_fmt = format!("{:<width$}", ip_str, width = match ip {
+            IpAddr::V4(_) => IPV4_W,
+            IpAddr::V6(_) => IPV6_W,
+        }
+        );
+        // 中间部分：方法、路径、用户代理，固定宽度并用 " - " 连接
+        let time_str = format_duration(elapsed, Some(4));
+        let time_fmt = format!("{:>width$}", time_str, width = TIME_W);
+        let status_str = response.status().as_u16().to_string();
+        let middle = format!(
+            "{:<mw$} {status_str} | {time_fmt} | {} - {:<uw$}",
+            method,
+            raw_path,
+            ua_str,
+            mw = METHOD_W,
+            uw = UA_W
+        );
+
+        format!(
+            "{} | {} | {}",
+            host_str, ip_fmt, middle
+        )
+    });
 
     response
+}
+
+// 按优先级尝试从不同代理头提取 IP
+fn extract_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
+    cf_connecting_ip(headers)
+        .or_else(|_| cloudfront_viewer_address(headers))
+        .or_else(|_| fly_client_ip(headers))
+        .or_else(|_| true_client_ip(headers))
+        .or_else(|_| x_real_ip(headers))
+        .or_else(|_| rightmost_x_forwarded_for(headers))
+        .ok()
+}
+
+pub async fn client_ip_middleware(
+    ConnectInfo(RemoteAddr(addr)): ConnectInfo<RemoteAddr>,
+    mut request: Request,
+    next: Next,
+) -> Response {
+    let headers = request.headers();
+    let ip = extract_ip_from_headers(headers).unwrap_or(addr);
+
+    request.extensions_mut().insert(RemoteAddr(ip));
+    println!("client_ip_middleware: {:?}", ip);
+    next.run(request).await
 }
 
 pub fn wrapper_router(router: Router) -> Router {
     router
         .layer(middleware::from_fn(logging_middleware))
+                .layer(middleware::from_fn(client_ip_middleware))
         .layer(CatchPanicLayer::new())
 }

@@ -1,8 +1,8 @@
-use std::{net::SocketAddr, time::SystemTime};
+use std::time::SystemTime;
 
 use axum::{
     Router,
-    extract::{ConnectInfo, Json, Query},
+    extract::{Json, Query},
     routing::{get, post},
 };
 use shared::database::get_database;
@@ -10,7 +10,10 @@ use shared::database::get_database;
 use crate::{
     database::auth::Authentication,
     foundation::RemoteAddr,
-    models::auth::{AuthJWTInfoExtract, AuthPostBody, AuthQueryInfo, AuthResponse, AuthResponseInfo},
+    models::{
+        auth::{AuthJWTInfoExtract, AuthPostBody, AuthQueryInfo, AuthResponse, AuthResponseInfo},
+        log::LogAddr,
+    },
     response::APIResponse,
 };
 
@@ -25,11 +28,11 @@ pub use totp::get_totp_code;
 
 #[axum::debug_handler]
 pub async fn login(
-    ConnectInfo(RemoteAddr(addr)): ConnectInfo<RemoteAddr>,
+    RemoteAddr(addr): RemoteAddr,
     Json(body): Json<AuthPostBody>,
 ) -> APIResponse<AuthResponse> {
     let now = SystemTime::now();
-    let res = inner_login(body, addr).await;
+    let res = inner_login(body, &LogAddr::from(addr)).await;
     if res.status() == 200 {
         return res;
     }
@@ -40,7 +43,7 @@ pub async fn login(
     res
 }
 
-async fn inner_login(body: AuthPostBody, addr: SocketAddr) -> APIResponse<AuthResponse> {
+async fn inner_login(body: AuthPostBody, addr: &LogAddr) -> APIResponse<AuthResponse> {
     if body.username.trim().is_empty() || body.totp.trim().is_empty() {
         return APIResponse::error(None, 401, "Invalid username or totp code");
     }
@@ -80,7 +83,6 @@ pub async fn get_userinfo(
         }),
         Err(_) => APIResponse::error(None, 404, "User not found"),
     }
-
 }
 pub async fn refresh_token(
     AuthJWTInfoExtract(info): AuthJWTInfoExtract,

@@ -1,3 +1,4 @@
+import { getUserInfo as getUserInfoAPI } from './apis/user';
 import { gotWithAuth } from './constant';
 import type {
     APIResponse,
@@ -6,8 +7,6 @@ import type {
     Website,
     WebsiteCreateRequest,
 } from './types';
-
-let userinfos: Record<string, UserInfo> = {};
 
 export async function createWebsite(
     website: WebsiteCreateRequest,
@@ -46,17 +45,6 @@ export async function fetchLog(limit: number, page: number): Promise<Log[]> {
     return resp.data;
 }
 
-export async function getUserInfo(user_id: string): Promise<UserInfo> {
-    if (userinfos[user_id]) {
-        return userinfos[user_id];
-    }
-    const resp = (await (
-        await gotWithAuth.get('auth/info', {
-            searchParams: {
-                user_id,
-            },
-        })
-    ).json()) as APIResponse<UserInfo>;
-    userinfos[user_id] = resp.data;
-    return resp.data;
+export function getUserInfo(user_id: string): Promise<UserInfo> {
+    return getUserInfoAPI(user_id);
 }

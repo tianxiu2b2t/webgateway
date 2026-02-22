@@ -1,11 +1,3 @@
-<script setup lang="ts">
-import Dialog from '../../plugins/dialog/Dialog.vue';
-import DialogClose from '../../plugins/dialog/DialogClose.vue';
-import InputEdit from '../InputEdit.vue';
-import InputEditMuitlOptions from '../InputEditMuitlOptions.vue';
-import AddWebsiteBackend from './AddWebsiteBackend.vue';
-</script>
-
 <template>
     <Dialog>
         <template #header>添加站点</template>
@@ -19,9 +11,23 @@ import AddWebsiteBackend from './AddWebsiteBackend.vue';
                 </div>
             </div>
         </template>
-        <template #footer><DialogClose /></template>
+        <template #footer><DialogClose @cancel="cancel" /></template>
     </Dialog>
 </template>
+
+<script setup lang="ts">
+import Dialog from '../../plugins/dialog/Dialog.vue';
+import DialogClose from '../../plugins/dialog/DialogClose.vue';
+import InputEdit from '../InputEdit.vue';
+import InputEditMuitlOptions from '../InputEditMuitlOptions.vue';
+import AddWebsiteBackend from './AddWebsiteBackend.vue';
+
+const emit = defineEmits(['close']);
+
+function cancel() {
+    emit('close');
+}
+</script>
 
 <style lang="css" scoped>
 .content {

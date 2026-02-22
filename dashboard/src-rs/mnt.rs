@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{os::unix::net::SocketAddr as UnixSocketAddr, path::PathBuf};
 
 use anyhow::Result;
 use shared::{
@@ -10,13 +10,14 @@ use shared::{
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::{UnixListener, UnixStream, unix::SocketAddr},
+    net::{UnixListener, UnixStream},
 };
 use tracing::event;
 
 use crate::{
     auth::get_totp_code,
     database::{auth::Authentication, log::WebLogManager},
+    models::log::LogAddr,
 };
 
 pub struct AutoCleanUnixListener(PathBuf);
@@ -38,7 +39,7 @@ pub async fn init() -> anyhow::Result<()> {
         let (stream, addr) = listener.accept().await?;
         event!(tracing::Level::INFO, "new unix connection: {addr:?}");
         tokio::spawn(async move {
-            let res = handle(stream, addr).await;
+            let res = handle(stream, UnixSocketAddr::from(addr)).await;
             if let Err(e) = res {
                 event!(tracing::Level::DEBUG, "handle error: {e:?}");
             }
@@ -46,7 +47,7 @@ pub async fn init() -> anyhow::Result<()> {
     }
 }
 
-async fn handle(mut stream: UnixStream, addr: SocketAddr) -> Result<()> {
+async fn handle(mut stream: UnixStream, addr: UnixSocketAddr) -> Result<()> {
     loop {
         let size = stream.read_zigzag_varint::<usize>().await?;
         let mut buf = vec![0; size];
@@ -71,7 +72,10 @@ async fn handle(mut stream: UnixStream, addr: SocketAddr) -> Result<()> {
     }
 }
 
-async fn handle_req(req: ClientRequestContent, addr: &SocketAddr) -> Result<ServerResponseContent> {
+async fn handle_req(
+    req: ClientRequestContent,
+    addr: &UnixSocketAddr,
+) -> Result<ServerResponseContent> {
     match req {
         ClientRequestContent::AdminTOTP => {
             let user = get_database().get_first_user().await?;
@@ -80,7 +84,7 @@ async fn handle_req(req: ClientRequestContent, addr: &SocketAddr) -> Result<Serv
                 .add_web_log(
                     &user.id,
                     &crate::models::log::LogContent::Raw("mnt.get_totp".to_string()),
-                    &format!("{addr:?}"),
+                    &LogAddr::from(addr.clone()),
                 )
                 .await?;
             Ok(ServerResponseContent::AdminTOTP {
