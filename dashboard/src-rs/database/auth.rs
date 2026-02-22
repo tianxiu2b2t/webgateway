@@ -194,12 +194,18 @@
 //     }
 // }
 
+use std::net::SocketAddr;
+
 use crate::{
     auth::{DEFAULT_ADMIN_USERNAME, generate_random_secret, get_totp_code},
+    database::log::WebLogManager,
     models::auth::DatabaseAuthentication,
 };
 use anyhow::{Result, anyhow};
-use shared::{database::Database, objectid::ObjectId};
+use shared::{
+    database::{Database, get_database},
+    objectid::ObjectId,
+};
 use sqlx::FromRow;
 use tracing::{self, Level, event};
 
@@ -217,7 +223,7 @@ pub trait Authentication {
     // async fn is_exists_user(&self, username: &str) -> Result<bool>;
     async fn get_user(&self, username: &str) -> Result<DatabaseAuthentication>;
     async fn get_first_user(&self) -> Result<DatabaseAuthentication>;
-    async fn verify_totp(&self, username: &str, totp: &str) -> Result<bool>;
+    async fn verify_totp(&self, username: &str, totp: &str, addr: SocketAddr) -> Result<bool>;
     async fn get_user_from_id(&self, id: &ObjectId) -> Result<DatabaseAuthentication>;
 }
 
@@ -262,20 +268,6 @@ impl Authentication for Database {
             }
         };
 
-        // if !first_user.bound {
-        //     // 此处只提示管理员绑定，不打印 TOTP 码到控制台（生产环境应通过安全渠道发送）
-        //     event!(
-        //         Level::INFO,
-        //         "Admin user '{}' is not bound. Please bind TOTP authenticator.",
-        //         first_user.username
-        //     );
-        //     println!(
-        //         "Admin user '{}' totp code: {}",
-        //         first_user.username,
-        //         get_totp_code(&first_user.username, first_user.totp_secret)?
-        //     );
-        // }
-
         Ok(())
     }
 
@@ -311,21 +303,6 @@ impl Authentication for Database {
         }
     }
 
-    // async fn is_exists_user(&self, username: &str) -> Result<bool> {
-    //     let exists: bool = sqlx::query_scalar(
-    //         r#"
-    //         SELECT EXISTS (
-    //             SELECT 1 FROM users WHERE LOWER(username) = LOWER($1)
-    //         )
-    //         "#,
-    //     )
-    //     .bind(username)
-    //     .fetch_one(&self.pool)
-    //     .await?;
-
-    //     Ok(exists)
-    // }
-
     async fn get_user(&self, username: &str) -> Result<DatabaseAuthentication> {
         let row = sqlx::query(&format!(
             r#"
@@ -358,14 +335,24 @@ impl Authentication for Database {
         Ok(DatabaseAuthentication::from_row(&row)?)
     }
 
-    async fn verify_totp(&self, username: &str, totp: &str) -> Result<bool> {
+    async fn verify_totp(&self, username: &str, totp: &str, addr: SocketAddr) -> Result<bool> {
         let user = match self.get_user(username).await {
             Ok(user) => user,
             Err(_) => return Ok(false), // 用户不存在视为验证失败
         };
 
         let expected = get_totp_code(username, user.totp_secret)?;
-        // 安全比对，避免时间攻击（但 TOTP 本身已有时间窗口，此处简单处理）
+        let success = totp == expected;
+        get_database()
+            .add_web_log(
+                &user.id,
+                &crate::models::log::LogContent::Raw(format!(
+                    "auth.user.login.{}",
+                    if success { "success" } else { "fail" }
+                )),
+                &addr.to_string(),
+            )
+            .await?;
         Ok(totp == expected)
     }
 

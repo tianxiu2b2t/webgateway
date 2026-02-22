@@ -18,7 +18,7 @@ impl DatabaseWebsiteInitializer for Database {
         for sql in [
             r#"CREATE TABLE IF NOT EXISTS websites (
                 id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
+                name TEXT,
                 hosts TEXT[] NOT NULL DEFAULT '{}',
                 ports uint2[] NOT NULL DEFAULT '{}',
                 certificates TEXT[] NOT NULL DEFAULT '{}',
@@ -81,7 +81,7 @@ impl DatabaseWebsiteSet for Database {
         let id = ObjectId::new();
         let row = sqlx::query("INSERT INTO websites (id, name, hosts, ports, certificates, backends, config) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;")
             .bind(id)
-            .bind(website.name.to_string())
+            .bind(website.name.as_ref())
             .bind(website.hosts.to_vec())
             .bind(website.ports.to_vec().iter().map(|v| U16::from(*v)).collect::<Vec<U16>>())
             .bind(website.certificates.to_vec())

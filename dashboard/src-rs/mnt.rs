@@ -10,11 +10,14 @@ use shared::{
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::{UnixListener, UnixStream},
+    net::{UnixListener, UnixStream, unix::SocketAddr},
 };
 use tracing::event;
 
-use crate::{auth::get_totp_code, database::auth::Authentication};
+use crate::{
+    auth::get_totp_code,
+    database::{auth::Authentication, log::WebLogManager},
+};
 
 pub struct AutoCleanUnixListener(PathBuf);
 
@@ -35,7 +38,7 @@ pub async fn init() -> anyhow::Result<()> {
         let (stream, addr) = listener.accept().await?;
         event!(tracing::Level::INFO, "new unix connection: {addr:?}");
         tokio::spawn(async move {
-            let res = handle(stream).await;
+            let res = handle(stream, addr).await;
             if let Err(e) = res {
                 event!(tracing::Level::DEBUG, "handle error: {e:?}");
             }
@@ -43,14 +46,13 @@ pub async fn init() -> anyhow::Result<()> {
     }
 }
 
-async fn handle(mut stream: UnixStream) -> Result<()> {
+async fn handle(mut stream: UnixStream, addr: SocketAddr) -> Result<()> {
     loop {
         let size = stream.read_zigzag_varint::<usize>().await?;
         let mut buf = vec![0; size];
         stream.read_exact(&mut buf).await?;
         let data = serde_json::from_slice::<ClientRequest>(&buf)?;
-        // TODO: handle request
-        let res = handle_req(data.content).await;
+        let res = handle_req(data.content, &addr).await;
         let response = match res {
             Ok(res) => ServerResponse {
                 id: data.id,
@@ -69,11 +71,18 @@ async fn handle(mut stream: UnixStream) -> Result<()> {
     }
 }
 
-async fn handle_req(req: ClientRequestContent) -> Result<ServerResponseContent> {
+async fn handle_req(req: ClientRequestContent, addr: &SocketAddr) -> Result<ServerResponseContent> {
     match req {
         ClientRequestContent::AdminTOTP => {
             let user = get_database().get_first_user().await?;
             let code = get_totp_code(&user.username, user.totp_secret)?;
+            get_database()
+                .add_web_log(
+                    &user.id,
+                    &crate::models::log::LogContent::Raw("mnt.get_totp".to_string()),
+                    &format!("{addr:?}"),
+                )
+                .await?;
             Ok(ServerResponseContent::AdminTOTP {
                 user: user.username.to_string(),
                 totp: code,

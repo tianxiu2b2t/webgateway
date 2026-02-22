@@ -11,6 +11,7 @@
                 <SvgIcon
                     :name="`presentation-${msg.type}`"
                     class="svg"
+                    size="1em"
                 ></SvgIcon>
             </div>
             <div class="text">{{ msg.message }}</div>

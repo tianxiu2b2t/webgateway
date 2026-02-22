@@ -54,7 +54,7 @@ onMounted(() => {
 }
 .button.reverse {
     color: var(--btn-cbg);
-    background-color: var(--dark-1-color);
+    background-color: transparent;
 }
 
 .button {

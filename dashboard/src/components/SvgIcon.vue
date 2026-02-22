@@ -1,10 +1,17 @@
 <template>
-    <svg aria-hidden="true" :style="{ width, height, color }">
+    <svg
+        aria-hidden="true"
+        :style="{
+            width: props.size || props.width,
+            height: props.size || props.height,
+            color,
+        }"
+    >
         <use :xlink:href="`#icon-${name}`" :fill="color" />
     </svg>
 </template>
 <script setup lang="ts">
-defineProps({
+const props = defineProps({
     name: String,
     color: String,
     width: {
@@ -14,6 +21,9 @@ defineProps({
     height: {
         type: String,
         default: '100%',
+    },
+    size: {
+        type: String,
     },
 });
 </script>

@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 // 系统深色模式媒体查询
 const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -25,11 +25,6 @@ function onSystemChange(e: MediaQueryListEvent) {
     }
 }
 mediaQuery.addEventListener('change', onSystemChange);
-
-// 组件卸载时移除监听器
-onUnmounted(() => {
-    mediaQuery.removeEventListener('change', onSystemChange);
-});
 
 export function toggleDark() {
     dark.value = true;

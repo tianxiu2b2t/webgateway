@@ -91,5 +91,15 @@ where
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuthResponseInfo {
+    pub id: ObjectId,
     pub username: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[
+    derive(Debug, Serialize, Deserialize, Clone)]
+
+pub struct AuthQueryInfo {
+    pub user_id: ObjectId,
 }

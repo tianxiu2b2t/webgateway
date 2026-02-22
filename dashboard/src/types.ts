@@ -46,3 +46,29 @@ export interface WebsiteCreateRequest {
     backends: WebsiteBackend[];
     config?: WebsiteConfig;
 }
+
+export interface Log {
+    id: string;
+    user_id: string;
+    content: LogContent;
+    created_at: string;
+    address: string;
+}
+
+export interface LogContent {
+    type: string;
+    content: string;
+    params: LogContentParams[];
+}
+
+export interface LogContentParams {
+    key: string;
+    value: string;
+}
+
+export interface UserInfo {
+    id: string;
+    username: string;
+    created_at: string;
+    updated_at: string;
+}

@@ -32,18 +32,21 @@
                 height: 100vh;
                 background-color: var(--bg-color);
                 color: var(--text-color);
+                overflow: auto;
             }
             :root {
                 --bg-color: rgb(247, 248, 250);
                 --text-color: rgba(0, 0, 0, 0.7);
                 --dark-1-color: rgba(255, 255, 255);
                 --main-color: #0fc6c2;
+                --scroll-bar: #fff;
             }
             :root.dark {
                 --bg-color: rgb(24, 24, 24);
                 --text-color: rgba(255, 255, 255, 0.7);
                 --dark-1-color: rgba(0, 0, 0);
                 --main-color: #f4d1b4;
+                --scroll-bar: #000;
             }
             ::-webkit-scrollbar,
             html ::-webkit-scrollbar {
@@ -53,13 +56,13 @@
             }
             ::-webkit-scrollbar-thumb,
             html ::-webkit-scrollbar-thumb {
-                box-shadow: inset 0 0 6px #0000;
+                box-shadow: inset 0 0 6px var(--scroll-bar);
                 background-color: #666;
                 border-radius: 10px;
             }
             ::-webkit-scrollbar-track,
             html ::-webkit-scrollbar-track {
-                box-shadow: inset 0 0 6px #0000;
+                box-shadow: inset 0 0 6px var(--scroll-bar);
                 background-color: #afafaf;
                 border-radius: 10px;
             }

@@ -3,9 +3,14 @@
         <div class="dialog-backdrop"></div>
         <div class="dialog-container">
             <Panel class="panel" @click.stop>
-                <div class="dialog-header"><slot name="header"></slot></div>
-                <div class="dialog-content"><slot name="content"></slot></div>
-                <div class="dialog-footer"><slot name="footer"></slot></div
+                <div class="dialog-header" v-if="$slots.header">
+                    <slot name="header"></slot>
+                </div>
+                <div class="dialog-content" v-if="$slots.content">
+                    <slot name="content"></slot>
+                </div>
+                <div class="dialog-footer" v-if="$slots.footer">
+                    <slot name="footer"></slot></div
             ></Panel>
         </div>
     </div>
@@ -110,7 +115,6 @@ onMounted(() => {
     appearance: none;
     text-align: center;
     font-size: 1.5rem;
-    --IconButton-hoverBg: rgba(0, 0, 0, 0.04);
     color: rgba(0, 0, 0, 0.5);
     outline: 0px;
     border-width: 0px;
@@ -135,6 +139,7 @@ onMounted(() => {
     transition: fill 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .dialog-content {
+    width: 100%;
     flex: 1 1 auto;
     overflow-y: auto;
     padding: 20px 24px;

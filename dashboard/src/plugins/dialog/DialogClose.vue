@@ -5,7 +5,8 @@ import Button from '../../components/Button.vue';
 <template>
     <div class="dialog-close-root">
         <div class="dialog-close-container">
-            <Button :reverse-color="true">取消</Button><Button>确定</Button>
+            <Button :reverse-color="true" @click="$emit('cancel')">取消</Button
+            ><Button @click="$emit('confirm')">确定</Button>
         </div>
     </div>
 </template>

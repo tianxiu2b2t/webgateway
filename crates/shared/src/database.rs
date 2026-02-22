@@ -8,10 +8,7 @@ pub mod certificate;
 pub mod dnsprovider;
 pub mod websites;
 
-static PG_EXTENSION: &[&str; 2] = &[
-    "uint128",
-    "btree_gin"
-];
+static PG_EXTENSION: &[&str; 2] = &["uint128", "btree_gin"];
 
 #[derive(Debug)]
 pub struct Database {

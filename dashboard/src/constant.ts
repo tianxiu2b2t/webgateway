@@ -81,3 +81,12 @@ router.beforeEach(async (to, _, next) => {
         next();
     }
 });
+
+export function pushQuery(query: Record<string, any>) {
+    router.push({
+        query: {
+            ...router.currentRoute.value.query,
+            ...query,
+        },
+    });
+}

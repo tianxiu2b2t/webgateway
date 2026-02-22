@@ -9,7 +9,7 @@ use crate::objectid::ObjectId;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseWebsite {
     pub id: ObjectId,
-    pub name: String,
+    pub name: Option<String>,
     pub hosts: Vec<String>,
     pub ports: Vec<u16>,
     pub certificates: Vec<ObjectId>,
@@ -65,7 +65,7 @@ pub enum DatabaseWebsiteRequestIp {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateDatabaseWebsite {
-    pub name: String,
+    pub name: Option<String>,
     pub hosts: Vec<String>,
     pub ports: Vec<u16>,
     pub certificates: Vec<ObjectId>,

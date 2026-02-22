@@ -1,7 +1,7 @@
 use crate::{
     config::{get_config, init_config},
-    database::auth::Authentication,
-    foundation::CListener,
+    database::{auth::Authentication, log::WebLogInitializer},
+    foundation::{CListener, RemoteAddr},
     response::wrapper_router,
 };
 use shared::{
@@ -27,6 +27,7 @@ async fn main() -> anyhow::Result<()> {
     init_config()?;
     init_database(&get_config().database, get_config().max_connections).await?;
     get_database().init_authentication().await?;
+    get_database().initialize_web_log().await?;
 
     event!(
         Level::INFO,
@@ -39,7 +40,11 @@ async fn main() -> anyhow::Result<()> {
         .merge(router::get_router());
 
     let web = tokio::spawn(async move {
-        let r = axum::serve(CListener::from(listener), wrapper_router(router)).await;
+        let r = axum::serve(
+            CListener::from(listener),
+            wrapper_router(router).into_make_service_with_connect_info::<RemoteAddr>(),
+        )
+        .await;
         if let Err(e) = r {
             event!(Level::ERROR, "Error while serving: {}", e);
         }
