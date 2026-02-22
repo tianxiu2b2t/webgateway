@@ -158,10 +158,7 @@ pub struct ReqRecord {
     remote_addr: IpAddr, // 可以从扩展中获取真实 IP
 }
 
-pub async fn logging_middleware(
-    req: Request<Body>,
-    next: Next,
-) -> Response<Body> {
+pub async fn logging_middleware(req: Request<Body>, next: Next) -> Response<Body> {
     let remote_addr = req.extensions().get::<RemoteAddr>().copied();
     let ip = IpAddr::from(remote_addr.unwrap());
     let host = req
@@ -193,10 +190,13 @@ pub async fn logging_middleware(
         let ip_str = ip.to_string();
         let ua_str = user_agent.as_deref().unwrap_or("-");
 
-        let ip_fmt = format!("{:<width$}", ip_str, width = match ip {
-            IpAddr::V4(_) => IPV4_W,
-            IpAddr::V6(_) => IPV6_W,
-        }
+        let ip_fmt = format!(
+            "{:<width$}",
+            ip_str,
+            width = match ip {
+                IpAddr::V4(_) => IPV4_W,
+                IpAddr::V6(_) => IPV6_W,
+            }
         );
         // 中间部分：方法、路径、用户代理，固定宽度并用 " - " 连接
         let time_str = format_duration(elapsed, Some(4));
@@ -211,10 +211,7 @@ pub async fn logging_middleware(
             uw = UA_W
         );
 
-        format!(
-            "{} | {} | {}",
-            host_str, ip_fmt, middle
-        )
+        format!("{} | {} | {}", host_str, ip_fmt, middle)
     });
 
     response
@@ -247,6 +244,6 @@ pub async fn client_ip_middleware(
 pub fn wrapper_router(router: Router) -> Router {
     router
         .layer(middleware::from_fn(logging_middleware))
-                .layer(middleware::from_fn(client_ip_middleware))
+        .layer(middleware::from_fn(client_ip_middleware))
         .layer(CatchPanicLayer::new())
 }

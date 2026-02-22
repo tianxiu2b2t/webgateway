@@ -1,7 +1,9 @@
 use std::net::{IpAddr, SocketAddr};
 
 use axum::{
-    extract::{FromRequestParts, connect_info::Connected}, http::request::Parts, serve::{IncomingStream, Listener}
+    extract::{FromRequestParts, connect_info::Connected},
+    http::request::Parts,
+    serve::{IncomingStream, Listener},
 };
 use shared::listener::CustomDualStackTcpListener;
 use tokio::net::TcpStream;
@@ -48,7 +50,10 @@ impl From<IpAddr> for RemoteAddr {
     }
 }
 
-impl<S> FromRequestParts<S> for RemoteAddr where S: Sync + Send {
+impl<S> FromRequestParts<S> for RemoteAddr
+where
+    S: Sync + Send,
+{
     type Rejection = APIResponse<()>;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {

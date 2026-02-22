@@ -17,7 +17,11 @@ impl From<IpAddr> for LogAddr {
 
 impl From<UnixSocketAddr> for LogAddr {
     fn from(addr: UnixSocketAddr) -> Self {
-        Self(addr.as_pathname().map(|v| v.to_path_buf().to_str().unwrap().to_string()).unwrap_or(format!("{addr:?}")))
+        Self(
+            addr.as_pathname()
+                .map(|v| v.to_path_buf().to_str().unwrap().to_string())
+                .unwrap_or(format!("{addr:?}")),
+        )
     }
 }
 
