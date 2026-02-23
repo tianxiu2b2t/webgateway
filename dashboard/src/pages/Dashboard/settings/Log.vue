@@ -29,14 +29,22 @@ const logConfig = ref({
     ],
 });
 const data = ref<object[] | null>(null);
+const perPage = ref(10);
 async function refresh() {
     logConfig.value.total = await getLogTotals();
-    const res = await fetchLog(20, 0);
+    const res = await fetchLog(perPage.value, 0);
     data.value = await Promise.all(
         res.map(async (item) => {
             return {
                 user: (await getUserInfo(item.user_id)).username,
-                content: item.content,
+                content: (() => {
+                    const content = item.content;
+                    if (content.type == 'raw') {
+                        return content.content;
+                    } else {
+                        return content.content;
+                    }
+                })(),
                 time: formatDate(item.created_at),
                 ip: item.address,
             };

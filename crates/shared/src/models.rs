@@ -7,7 +7,7 @@
 // use utils::default_false;
 
 pub mod certificate;
-pub mod dns;
+pub mod dnsprovider;
 pub mod websites;
 
 // #[derive(Debug, Clone, Serialize, Deserialize)]

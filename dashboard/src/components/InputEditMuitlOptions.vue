@@ -6,7 +6,7 @@
         <div class="inputedit-main">
             <div
                 class="MuiButtonBase-root MuiChip-root MuiChip-outlined MuiChip-sizeMedium MuiChip-colorDefault MuiChip-deletable MuiChip-deletableColorDefault MuiChip-outlinedDefault MuiAutocomplete-tag MuiAutocomplete-tagSizeMedium css-3pgfal"
-                v-for="(data, idx) in values"
+                v-for="data in values"
             >
                 <span class="MuiChip-label MuiChip-labelMedium css-1fqh3rg">{{
                     data
@@ -92,7 +92,23 @@ const props = defineProps({
 });
 const container = ref<HTMLDivElement>();
 const value = ref<string>('');
-const values = ref<string[]>([]);
+const values = ref<string[]>([
+    '123',
+    '456',
+    '789',
+    '101112',
+    '135',
+    '123',
+    '456',
+    '789',
+    '101112',
+    '135',
+    '123',
+    '456',
+    '789',
+    '101112',
+    '135',
+]);
 const focus = ref<boolean>(false);
 const placeholder = ref<string>(props.placeholder);
 const emit = defineEmits(['update:value']);

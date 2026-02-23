@@ -53,7 +53,21 @@
                                     </svg>
                                 </button>
                             </li>
-                            <li>
+                            <li v-for="val in displayPages">
+                                <button
+                                    class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary Mui-selected MuiPaginationItem-page css-caawcg"
+                                    v-if="typeof val === 'number'"
+                                >
+                                    {{ val }}
+                                </button>
+                                <div
+                                    v-else
+                                    class="MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-ellipsis css-v1dd70"
+                                >
+                                    …
+                                </div>
+                            </li>
+                            <!-- <li>
                                 <button
                                     class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary Mui-selected MuiPaginationItem-page css-caawcg"
                                     tabindex="0"
@@ -128,7 +142,7 @@
                                         class="MuiTouchRipple-root css-4mb1j7"
                                     ></span>
                                 </button>
-                            </li>
+                            </li> -->
                             <li>
                                 <button
                                     class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-previousNext css-caawcg"
@@ -210,6 +224,30 @@ const props = defineProps({
 const totalPages = computed(() => {
     return Math.ceil(props.config.total / props.pageSize);
 });
+const displayPages = computed(() => {
+    // first and last need,
+    // current and prev and next
+    // else use ...
+    const pages = [];
+    if (totalPages.value <= 7) {
+        for (let i = 1; i <= totalPages.value; i++) {
+            pages.push(i);
+        }
+    } else {
+        if (props.currentPage <= 4) {
+            for (let i = 1; i <= 5; i++) {
+                pages.push(i);
+            }
+            pages.push('...');
+            pages.push(totalPages.value);
+        } else if (props.currentPage >= totalPages.value - 3) {
+            pages.push(1);
+            pages.push('...');
+        }
+    }
+    return pages;
+});
+console.log(displayPages.value);
 </script>
 <style>
 :root.dark {
