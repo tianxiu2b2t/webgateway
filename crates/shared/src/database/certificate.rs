@@ -190,7 +190,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::database::Database;
+use crate::{database::Database, models::certificate::DatabaseCertificate};
 
 #[async_trait]
 pub trait DatabaseCertificateInitializer {
@@ -217,5 +217,23 @@ impl DatabaseCertificateInitializer for Database {
         .await?;
 
         Ok(())
+    }
+}
+
+#[async_trait]
+pub trait DatabaseCertificateRepository {
+    async fn get_certificates(&self) -> Result<Vec<DatabaseCertificate>>;
+}
+
+#[async_trait]
+impl DatabaseCertificateRepository for Database {
+    async fn get_certificates(&self) -> Result<Vec<DatabaseCertificate>> {
+        let certs = sqlx::query_as::<_, DatabaseCertificate>(
+            "SELECT id, hostnames, fullchain, private_key, dns_provider_id, expires_at, created_at, updated_at FROM certificates",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(certs)
     }
 }

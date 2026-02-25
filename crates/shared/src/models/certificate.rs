@@ -113,11 +113,12 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, Row, postgres::PgRow};
 
 use crate::objectid::ObjectId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Certificate {
+pub struct DatabaseCertificate {
     pub id: ObjectId,
     pub hostnames: Vec<String>,
     pub expires_at: DateTime<Utc>,
@@ -126,4 +127,20 @@ pub struct Certificate {
     pub dns_provider_id: Option<ObjectId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+
+impl<'r> FromRow<'r, PgRow> for DatabaseCertificate {
+    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            hostnames: row.try_get("hostnames")?,
+            expires_at: row.try_get("expires_at")?,
+            fullchain: row.try_get("fullchain")?,
+            private_key: row.try_get("private_key")?,
+            dns_provider_id: row.try_get("dns_provider_id")?,
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+        })
+    }
 }

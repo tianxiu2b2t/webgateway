@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::database::Database;
+use crate::{database::Database, models::dnsprovider::DatabaseDNSProvider};
 use anyhow::Result;
 
 #[async_trait]
@@ -24,7 +24,26 @@ impl DatabaseDNSProviderInitializer for Database {
         )
         .execute(&self.pool)
         .await?;
-        // TODO: Implement this
         Ok(())
     }
 }
+
+#[async_trait]
+pub trait DatabaseDNSProviderQuery {
+    async fn get_dns_providers(&self) -> Result<Vec<DatabaseDNSProvider>>;
+}
+
+#[async_trait]
+impl DatabaseDNSProviderQuery for Database {
+    async fn get_dns_providers(&self) -> Result<Vec<DatabaseDNSProvider>> {
+        let rows = sqlx::query_as::<_, DatabaseDNSProvider>(
+            r#"
+            SELECT * FROM dns_providers
+        "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+}
+
