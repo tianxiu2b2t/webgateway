@@ -68,7 +68,9 @@ impl<'r> FromRow<'r, PgRow> for DatabaseDNSProvider {
     fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
             id: row.try_get("id")?,
-            provider: row.try_get::<Json<DatabaseDNSProviderKind>, _>("provider")?.0,
+            provider: row
+                .try_get::<Json<DatabaseDNSProviderKind>, _>("provider")?
+                .0,
             domains: row.try_get("domains")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,

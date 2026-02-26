@@ -2,7 +2,10 @@ use std::sync::OnceLock;
 
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 
-use crate::database::{certificate::DatabaseCertificateInitializer, dnsprovider::DatabaseDNSProviderInitializer, websites::DatabaseWebsiteInitializer};
+use crate::database::{
+    certificate::DatabaseCertificateInitializer, dnsprovider::DatabaseDNSProviderInitializer,
+    websites::DatabaseWebsiteInitializer,
+};
 
 pub mod certificate;
 pub mod dnsprovider;

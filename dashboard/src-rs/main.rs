@@ -13,6 +13,7 @@ use tokio::signal::ctrl_c;
 use tracing::{Level, event};
 
 pub mod auth;
+pub mod certificate;
 pub mod config;
 mod database;
 mod foundation;
@@ -58,10 +59,18 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    let auto_cert = tokio::spawn(async move {
+        let res = certificate::init().await;
+        if let Err(e) = res {
+            event!(Level::ERROR, "Error while serving: {}", e);
+        }
+    });
+
     match ctrl_c().await {
         Ok(()) => {
             web.abort();
             mnt.abort();
+            auto_cert.abort();
             event!(Level::INFO, "Dashboard API shutting down")
         }
         Err(e) => event!(Level::ERROR, "Dashboard API failed to shut down: {}", e),

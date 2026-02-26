@@ -190,7 +190,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::{database::Database, models::certificate::DatabaseCertificate};
+use crate::{
+    database::Database,
+    models::certificate::{DatabaseCertificate, NeedSignCertificate, UpdateCertificate},
+};
 
 #[async_trait]
 pub trait DatabaseCertificateInitializer {
@@ -208,9 +211,12 @@ impl DatabaseCertificateInitializer for Database {
                 fullchain TEXT,
                 private_key TEXT,
                 dns_provider_id TEXT,
+                email TEXT,
                 expires_at TIMESTAMPTZ,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW,
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                FOREIGN KEY (dns_provider_id) REFERENCES dns_providers(id) ON DELETE SET NULL
+            )
         "#,
         )
         .execute(&self.pool)
@@ -223,17 +229,43 @@ impl DatabaseCertificateInitializer for Database {
 #[async_trait]
 pub trait DatabaseCertificateRepository {
     async fn get_certificates(&self) -> Result<Vec<DatabaseCertificate>>;
+    async fn get_will_sign_certificates(&self) -> Result<Vec<NeedSignCertificate>>;
+
+    async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()>;
 }
 
 #[async_trait]
 impl DatabaseCertificateRepository for Database {
     async fn get_certificates(&self) -> Result<Vec<DatabaseCertificate>> {
         let certs = sqlx::query_as::<_, DatabaseCertificate>(
-            "SELECT id, hostnames, fullchain, private_key, dns_provider_id, expires_at, created_at, updated_at FROM certificates",
+            "SELECT id, hostnames, fullchain, private_key, dns_provider_id, email, expires_at, created_at, updated_at FROM certificates",
         )
         .fetch_all(&self.pool)
         .await?;
 
         Ok(certs)
+    }
+
+    async fn get_will_sign_certificates(&self) -> Result<Vec<NeedSignCertificate>> {
+        let certs = sqlx::query_as::<_, NeedSignCertificate>(
+            "SELECT id, hostnames, dns_provider_id FROM certificates WHERE (expires_at IS NULL OR expires_at < (NOW() - '7 days'::INTERVAL)) AND dns_provider_id IS NOT NULL AND email IS NOT NULL",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(certs)
+    }
+
+    async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()> {
+        sqlx::query(
+            "UPDATE certificates SET fullchain = $1, private_key = $2, expires_at = $3, updated_at = NOW() WHERE id = $4",
+        )
+        .bind(&cert.fullchain)
+        .bind(&cert.private_key)
+        .bind(cert.expires_at()?)
+        .bind(cert.id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 }

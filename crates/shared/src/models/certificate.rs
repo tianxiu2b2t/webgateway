@@ -112,8 +112,10 @@
 // }
 
 use chrono::{DateTime, Utc};
+use pem::parse_many;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row, postgres::PgRow};
+use x509_parser::prelude::{FromDer, X509Certificate};
 
 use crate::objectid::ObjectId;
 
@@ -125,10 +127,10 @@ pub struct DatabaseCertificate {
     pub fullchain: String,
     pub private_key: String,
     pub dns_provider_id: Option<ObjectId>,
+    pub email: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
-
 
 impl<'r> FromRow<'r, PgRow> for DatabaseCertificate {
     fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
@@ -139,8 +141,61 @@ impl<'r> FromRow<'r, PgRow> for DatabaseCertificate {
             fullchain: row.try_get("fullchain")?,
             private_key: row.try_get("private_key")?,
             dns_provider_id: row.try_get("dns_provider_id")?,
+            email: row.try_get("email")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
         })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NeedSignCertificate {
+    pub id: ObjectId,
+    pub hostnames: Vec<String>,
+    pub dns_provider_id: ObjectId,
+    pub email: String,
+}
+
+impl<'r> FromRow<'r, PgRow> for NeedSignCertificate {
+    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            id: row.try_get("id")?,
+            hostnames: row.try_get("hostnames")?,
+            dns_provider_id: row.try_get("dns_provider_id")?,
+            email: row.try_get("email")?,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateCertificate {
+    pub id: ObjectId,
+    pub fullchain: String,
+    pub private_key: String,
+}
+
+impl UpdateCertificate {
+    pub fn new(id: ObjectId, fullchain: String, private_key: String) -> Self {
+        Self {
+            id,
+            fullchain,
+            private_key,
+        }
+    }
+
+    pub fn expires_at(&self) -> anyhow::Result<DateTime<Utc>> {
+        // 1. Parse the PEM blocks from the fullchain string
+        let pem_blocks = parse_many(self.fullchain.as_bytes())?;
+        // 2. Get the first certificate (leaf)
+        let leaf_pem = pem_blocks
+            .first()
+            .ok_or(anyhow::anyhow!("Failed to get first certificate"))?;
+        // 3. Parse the DER contents as an X.509 certificate
+        let (_, cert) = X509Certificate::from_der(leaf_pem.contents())?;
+        // 4. Extract the `not_after` timestamp
+        let not_after = cert.validity().not_after;
+        // 5. Convert to chrono::DateTime<Utc>
+        //    X.509 timestamps can be in UTC (Z) or with offsets; `not_after.timestamp()` gives seconds since epoch.
+        Ok(DateTime::from_timestamp(not_after.timestamp(), 0).unwrap())
     }
 }

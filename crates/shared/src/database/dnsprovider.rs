@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{database::Database, models::dnsprovider::DatabaseDNSProvider};
+use crate::{database::Database, models::dnsprovider::DatabaseDNSProvider, objectid::ObjectId};
 use anyhow::Result;
 
 #[async_trait]
@@ -18,8 +18,9 @@ impl DatabaseDNSProviderInitializer for Database {
                 provider_type TEXT NOT NULL,
                 provider_config JSONB NOT NULL,
                 domains TEXT[] NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW,
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
         "#,
         )
         .execute(&self.pool)
@@ -31,6 +32,7 @@ impl DatabaseDNSProviderInitializer for Database {
 #[async_trait]
 pub trait DatabaseDNSProviderQuery {
     async fn get_dns_providers(&self) -> Result<Vec<DatabaseDNSProvider>>;
+    async fn get_dns_provider_by_id(&self, id: &ObjectId) -> Result<DatabaseDNSProvider>;
 }
 
 #[async_trait]
@@ -45,5 +47,16 @@ impl DatabaseDNSProviderQuery for Database {
         .await?;
         Ok(rows)
     }
-}
 
+    async fn get_dns_provider_by_id(&self, id: &ObjectId) -> Result<DatabaseDNSProvider> {
+        let row = sqlx::query_as::<_, DatabaseDNSProvider>(
+            r#"
+            SELECT * FROM dns_providers WHERE id = $1
+        "#,
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row)
+    }
+}
