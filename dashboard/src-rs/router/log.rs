@@ -1,13 +1,11 @@
-use axum::{Router, extract::Query, routing::get};
+use axum::{Router, extract::Query, middleware, routing::get};
 use shared::database::get_database;
 
 use crate::{
-    database::log::WebLogManager,
-    models::{
+    auth::middle_refresh_token, database::log::WebLogManager, models::{
         auth::AuthJWTInfoExtract,
         log::{Log, LogQueryParams},
-    },
-    response::APIResponse,
+    }, response::APIResponse
 };
 
 pub async fn info(AuthJWTInfoExtract(_): AuthJWTInfoExtract) -> APIResponse<usize> {
@@ -32,4 +30,5 @@ pub fn router() -> Router {
     Router::new()
         .route("/total", get(info))
         .route("/page", get(paged))
+        .layer(middleware::from_fn(middle_refresh_token))
 }

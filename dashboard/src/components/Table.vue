@@ -39,7 +39,8 @@
                                     tabindex="-1"
                                     type="button"
                                     aria-label="Go to previous page"
-                                    disabled
+                                    :disabled="!hasPrev"
+                                    @click="currentPage--"
                                 >
                                     <svg
                                         class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium MuiPaginationItem-icon css-4v85u4"
@@ -57,6 +58,7 @@
                                 <button
                                     class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary Mui-selected MuiPaginationItem-page css-caawcg"
                                     v-if="typeof val === 'number'"
+                                    @click="currentPage = val"
                                 >
                                     {{ val }}
                                 </button>
@@ -67,88 +69,14 @@
                                     …
                                 </div>
                             </li>
-                            <!-- <li>
-                                <button
-                                    class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary Mui-selected MuiPaginationItem-page css-caawcg"
-                                    tabindex="0"
-                                    type="button"
-                                    aria-label="page 1"
-                                    aria-current="page"
-                                >
-                                    1
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-page css-caawcg"
-                                    tabindex="0"
-                                    type="button"
-                                    aria-label="Go to page 2"
-                                >
-                                    2
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-page css-caawcg"
-                                    tabindex="0"
-                                    type="button"
-                                    aria-label="Go to page 3"
-                                >
-                                    3<span
-                                        class="MuiTouchRipple-root css-4mb1j7"
-                                    ></span>
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-page css-caawcg"
-                                    tabindex="0"
-                                    type="button"
-                                    aria-label="Go to page 4"
-                                >
-                                    4<span
-                                        class="MuiTouchRipple-root css-4mb1j7"
-                                    ></span>
-                                </button>
-                            </li>
-                            <li>
-                                <button
-                                    class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-page css-caawcg"
-                                    tabindex="0"
-                                    type="button"
-                                    aria-label="Go to page 5"
-                                >
-                                    5<span
-                                        class="MuiTouchRipple-root css-4mb1j7"
-                                    ></span>
-                                </button>
-                            </li>
-                            <li>
-                                <div
-                                    class="MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-ellipsis css-v1dd70"
-                                >
-                                    …
-                                </div>
-                            </li>
-                            <li>
-                                <button
-                                    class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-page css-caawcg"
-                                    tabindex="0"
-                                    type="button"
-                                    aria-label="Go to page 215"
-                                >
-                                    215<span
-                                        class="MuiTouchRipple-root css-4mb1j7"
-                                    ></span>
-                                </button>
-                            </li> -->
                             <li>
                                 <button
                                     class="MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-circular MuiPaginationItem-colorPrimary MuiPaginationItem-textPrimary MuiPaginationItem-previousNext css-caawcg"
                                     tabindex="0"
                                     type="button"
                                     aria-label="Go to next page"
+                                    :disabled="!hasNext"
+                                    @click="currentPage++"
                                 >
                                     <svg
                                         class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium MuiPaginationItem-icon css-4v85u4"
@@ -182,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import InputEdit from './InputEdit.vue';
 import Panel from './Panel.vue';
 export interface TableHeaderConfig {
@@ -234,20 +162,34 @@ const displayPages = computed(() => {
             pages.push(i);
         }
     } else {
-        if (props.currentPage <= 4) {
+        if (currentPage.value <= 4) {
             for (let i = 1; i <= 5; i++) {
                 pages.push(i);
             }
             pages.push('...');
             pages.push(totalPages.value);
-        } else if (props.currentPage >= totalPages.value - 3) {
+        } else if (currentPage.value >= totalPages.value - 3) {
             pages.push(1);
             pages.push('...');
         }
     }
     return pages;
 });
-console.log(displayPages.value);
+const currentPage = ref(props.currentPage);
+const hasPrev = computed(() => {
+    return currentPage.value > 1;
+});
+const hasNext = computed(() => {
+    return currentPage.value < totalPages.value;
+});
+watch(
+    () => currentPage.value,
+    (newVal) => {
+        console.log('newVal', newVal);
+        console.log(hasPrev, hasNext);
+        emit('currentPage', newVal);
+    },
+);
 </script>
 <style>
 :root.dark {
@@ -355,10 +297,10 @@ console.log(displayPages.value);
     margin: 0px;
     list-style: none;
 }
-.css-caawcg.Mui-disabled {
+.css-caawcg[disabled] {
     opacity: 0.38;
 }
-.css-caawcg.Mui-disabled {
+.css-caawcg[disabled] {
     pointer-events: none;
     cursor: default;
 }
@@ -414,5 +356,16 @@ console.log(displayPages.value);
     vertical-align: top;
     width: 59px;
     margin: 0px 8px;
+}
+.css-4v85u4 {
+    user-select: none;
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    flex-shrink: 0;
+    fill: currentcolor;
+    font-size: 1.25rem;
+    transition: fill 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    margin: 0px -8px;
 }
 </style>

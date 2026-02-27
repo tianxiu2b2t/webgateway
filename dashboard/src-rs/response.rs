@@ -172,7 +172,7 @@ pub async fn logging_middleware(req: Request<Body>, next: Next) -> Response<Body
         .and_then(|h| h.to_str().ok())
         .map(|s| s.to_string());
     let method = req.method().to_string();
-    let raw_path = req.uri().path().to_string();
+    let raw_path = req.uri().to_string();
 
     let start = Instant::now();
     let response = next.run(req).await;

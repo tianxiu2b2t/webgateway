@@ -22,6 +22,11 @@ export const got = ky.create({
                 try {
                     resp = await response.json();
                 } catch (e) {}
+                if (response.headers.has('Refresh-Authorization')) {
+                    const token = response.headers.get('Refresh-Authorization');
+                    if (token) {
+                    }
+                }
                 return new Response(JSON.stringify(resp), response);
             },
         ],

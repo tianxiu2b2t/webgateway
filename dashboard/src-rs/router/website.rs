@@ -1,6 +1,5 @@
 use axum::{
-    Json, Router,
-    routing::{get, post},
+    Json, Router, middleware, routing::{get, post}
 };
 use shared::{
     database::{
@@ -10,7 +9,7 @@ use shared::{
     models::websites::{CreateDatabaseWebsite, DatabaseWebsite},
 };
 
-use crate::{models::auth::AuthJWTInfoExtract, response::APIResponse};
+use crate::{auth::middle_refresh_token, models::auth::AuthJWTInfoExtract, response::APIResponse};
 
 pub async fn get_all(
     AuthJWTInfoExtract(_): AuthJWTInfoExtract,
@@ -29,4 +28,5 @@ pub fn router() -> Router {
     Router::new()
         .route("/", get(get_all))
         .route("/create", post(create))
+        .layer(middleware::from_fn(middle_refresh_token))
 }

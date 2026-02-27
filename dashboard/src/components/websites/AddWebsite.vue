@@ -3,7 +3,11 @@
         <template #header>添加站点</template>
         <template #content>
             <div class="content">
-                <InputEditMuitlOptions label="匹配域名" />
+                <InputEdit
+                    label="匹配域名"
+                    :muitloptions="true"
+                    placeholder="支持 * 以匹配网站域名"
+                />
                 <InputEdit label="开放端口" />
                 <InputEdit label="网站证书" />
                 <div>
@@ -19,7 +23,6 @@
 import Dialog from '../../plugins/dialog/Dialog.vue';
 import DialogClose from '../../plugins/dialog/DialogClose.vue';
 import InputEdit from '../InputEdit.vue';
-import InputEditMuitlOptions from '../InputEditMuitlOptions.vue';
 import AddWebsiteBackend from './AddWebsiteBackend.vue';
 
 const emit = defineEmits(['close']);

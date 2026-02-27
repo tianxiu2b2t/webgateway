@@ -75,6 +75,11 @@ where
     type Rejection = APIResponse<()>;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        // first get from extsions
+        let info = parts.extensions.get::<AuthJWTInfo>();
+        if let Some(info) = info {
+            return Ok(Self(info.clone()));
+        }
         let authorization = parts
             .headers
             .get("Authorization")
@@ -85,6 +90,7 @@ where
             .await
             .ok()
             .ok_or(AppError::Unauthorized)?;
+        parts.extensions.insert(info.clone());
         Ok(Self(info))
     }
 }

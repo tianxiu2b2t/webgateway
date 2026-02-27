@@ -1,9 +1,13 @@
 <template>
-    <Table :config="logConfig" :data="data"></Table>
+    <Table
+        :config="logConfig"
+        :data="data"
+        @current-page="(v) => (currentPage = v)"
+    ></Table>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import Table from '../../../components/Table.vue';
 import { fetchLog, getLogTotals, getUserInfo } from '../../../api';
 import { formatDate } from '../../../utils';
@@ -30,9 +34,16 @@ const logConfig = ref({
 });
 const data = ref<object[] | null>(null);
 const perPage = ref(10);
+const currentPage = ref(1);
+watch(
+    () => currentPage.value,
+    async () => {
+        await refresh();
+    },
+);
 async function refresh() {
     logConfig.value.total = await getLogTotals();
-    const res = await fetchLog(perPage.value, 0);
+    const res = await fetchLog(perPage.value, currentPage.value - 1);
     data.value = await Promise.all(
         res.map(async (item) => {
             return {
