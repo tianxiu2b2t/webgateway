@@ -1,7 +1,12 @@
 use std::time::SystemTime;
 
 use axum::{
-    Router, body::Body, extract::{Json, Query, Request}, http::{HeaderValue, Response}, middleware::Next, routing::{get, post}
+    Router,
+    body::Body,
+    extract::{Json, Query, Request},
+    http::{HeaderValue, Response},
+    middleware::Next,
+    routing::{get, post},
 };
 use shared::database::get_database;
 
@@ -94,14 +99,21 @@ pub async fn refresh_token(
 // middle response
 pub async fn middle_refresh_token(
     AuthJWTInfoExtract(info): AuthJWTInfoExtract,
-    req: Request<Body>, next: Next,
+    req: Request<Body>,
+    next: Next,
 ) -> Response<Body> {
     let mut resp = next.run(req).await;
     // refresh token
     if resp.status() == 200 {
         let token = sign_jwt(&info.user.username).await.unwrap();
-        resp.headers_mut().insert("Refresh-Token", HeaderValue::from_str(&token.token).unwrap());
-        resp.headers_mut().insert("Refresh-Token-Expired", HeaderValue::from_str(&token.exp_at.to_rfc3339()).unwrap());
+        resp.headers_mut().insert(
+            "Refresh-Token",
+            HeaderValue::from_str(&token.token).unwrap(),
+        );
+        resp.headers_mut().insert(
+            "Refresh-Token-Expired",
+            HeaderValue::from_str(&token.exp_at.to_rfc3339()).unwrap(),
+        );
     }
     resp
 }

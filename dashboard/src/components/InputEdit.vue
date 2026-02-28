@@ -1,7 +1,10 @@
 <template>
     <div
         class="inputedit-container"
-        :class="{ 'muitl-options': props.muitloptions }"
+        :class="{
+            'ie-muitl-options': props.muitloptions,
+            'ie-textarea': props.textarea,
+        }"
         ref="container"
     >
         <label class="inputedit-label" :for="`ie-${id}`">{{
@@ -22,6 +25,7 @@
                 ></SvgIcon>
             </div>
             <input
+                v-if="!props.textarea"
                 class="inputedit-input"
                 :type="props.type"
                 :name="props.name"
@@ -35,6 +39,22 @@
                 @input="handleInput"
                 @keydown.enter="handleEnter"
             />
+            <textarea
+                v-if="props.textarea"
+                class="inputedit-input"
+                :type="props.type"
+                :name="props.name"
+                :value="value"
+                :disabled="props.disabled"
+                :required="props.required"
+                :placeholder="placeholder"
+                :id="`ie-${id}`"
+                @focus="focus = true"
+                @blur="focus = false"
+                @input="handleInput"
+                @keydown.enter="handleEnter"
+            >
+            </textarea>
             <div class="inputedit-cac" v-if="hasContent && props.muitloptions">
                 <button class="inputedit-cab" @click="clearAll">
                     <SvgIcon
@@ -93,6 +113,10 @@ const props = defineProps({
         default: 'text',
     },
     muitloptions: {
+        type: Boolean,
+        default: false,
+    },
+    textarea: {
         type: Boolean,
         default: false,
     },
@@ -192,7 +216,9 @@ onMounted(() => {
 .inputedit-active {
     color: var(--main-color);
 }
-
+.ie-textarea .inputedit-main {
+    height: 240px;
+}
 .inputedit-container {
     display: inline-flex;
     flex-direction: column;
@@ -236,7 +262,7 @@ onMounted(() => {
         transform 200ms cubic-bezier(0, 0, 0.2, 1),
         max-width 200ms cubic-bezier(0, 0, 0.2, 1);
 }
-.muitl-options .inputedit-main {
+.ie-muitl-options .inputedit-main {
     flex-wrap: wrap;
     padding-top: 6px;
     padding-bottom: 6px;
@@ -276,7 +302,10 @@ onMounted(() => {
     padding: 8.5px 14px;
     outline: none;
 }
-.muitl-options .inputedit-input {
+.ie-textarea .inputedit-input {
+    height: calc(100% - 1.4375em);
+}
+.ie-muitl-options .inputedit-input {
     padding: 2.5px 4px 2.5px 8px;
     -webkit-box-flex: 1;
     flex-grow: 1;

@@ -3,6 +3,7 @@
         :config="logConfig"
         :data="data"
         @current-page="(v) => (currentPage = v)"
+        @page-size="(v) => (perPage = v)"
     >
         <template #header>系统日志</template>
     </Table>

@@ -34,3 +34,21 @@ pub fn default_false() -> bool {
 pub fn default_true() -> bool {
     true
 }
+
+
+// 替换敏感数据
+pub fn replace_sensitive_data(data: impl Into<String>) -> String {
+    let d = data.into();
+    let len = d.len();
+    if len > 4 {
+        // replace to *
+        let mut result = String::new();
+        result.push_str(&d[0..2]);
+        for _ in 4..len - 2 {
+            result.push('*');
+        }
+        result.push_str(&d[len - 2..]);
+        return result;
+    }
+    d
+}

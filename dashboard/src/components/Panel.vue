@@ -31,5 +31,8 @@
     transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 8px;
     padding: 24px;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
 }
 </style>

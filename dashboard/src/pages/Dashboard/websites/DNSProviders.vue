@@ -1,10 +1,19 @@
 <template>
-    <Table :config="tableConfig">
+    <Table
+        :config="tableConfig"
+        :data="data"
+        @current-page="(v) => (currentPage = v)"
+        @page-size="(v) => (perPage = v)"
+    >
         <template #header
             ><div class="header">
                 <div>
                     <span class="title">域名解析</span
-                    ><span class="tip">为自动证书添加域名解析</span>
+                    ><span class="tip"
+                        >(共
+                        {{ tableConfig.total }}
+                        个解析，为自动证书添加域名解析)</span
+                    >
                 </div>
                 <Button style="width: auto" @click="addDialog(AddDNSProvider)"
                     >添加解析</Button
@@ -15,11 +24,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import Table, { type TableConfig } from '../../../components/Table.vue';
 import Button from '../../../components/Button.vue';
 import { addDialog } from '../../../plugins/dialog';
 import AddDNSProvider from '../../../components/websites/AddDNSProvider.vue';
+import { fetch, total } from '../../../apis/dnsproviders';
+import { formatDate } from '../../../utils';
 const tableConfig = ref<TableConfig>({
     total: 0,
     headers: [
@@ -45,6 +56,26 @@ const tableConfig = ref<TableConfig>({
         },
     ],
 });
+const data = ref<any[]>([]);
+const perPage = ref(10);
+const currentPage = ref(1);
+onMounted(async () => {
+    await refresh();
+});
+async function refresh() {
+    tableConfig.value.total = await total();
+    const res = await fetch(currentPage.value - 1, perPage.value);
+    data.value = res.map((v) => {
+        return {
+            name: v.name,
+            type: v.type,
+            // ','
+            domain: v.domains.join(', '),
+            updated_at: formatDate(v.updated_at),
+            created_at: formatDate(v.created_at),
+        };
+    });
+}
 </script>
 
 <style lang="css" scoped>

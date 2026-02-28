@@ -83,7 +83,7 @@ export const router = createRouter({
                 {
                     path: 'websites/certificates',
                     component: () =>
-                        import('./pages/Dashboard/websites/Certificates.vue'),
+                        import('./pages/Dashboard/websites/CertificateManager.vue'),
                 },
             ],
         },

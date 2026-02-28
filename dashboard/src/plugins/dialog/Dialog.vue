@@ -88,6 +88,8 @@ onMounted(() => {
     max-width: 600px;
     box-shadow: var(--dialog-panel-shadow);
     padding: 0;
+    display: flex;
+    flex-direction: column;
 }
 .dialog-header {
     margin: 0px;
@@ -147,6 +149,7 @@ onMounted(() => {
     flex: 1 1 auto;
     overflow-y: auto;
     padding: 20px 24px;
+    height: 100%;
 }
 .dialog-footer + .dialog-content {
     padding-bottom: 0px;

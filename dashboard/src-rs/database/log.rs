@@ -72,7 +72,7 @@ pub trait WebLogManager {
         address: &LogAddr,
     ) -> Result<()>;
 
-    async fn get_web_logs_of_total(&self) -> Result<usize>;
+    async fn get_total_of_web_logs(&self) -> Result<usize>;
     async fn get_web_logs_by_page(&self, page: usize, size: usize) -> Result<Vec<Log>>;
 }
 
@@ -99,7 +99,7 @@ impl WebLogManager for Database {
         Ok(())
     }
 
-    async fn get_web_logs_of_total(&self) -> Result<usize> {
+    async fn get_total_of_web_logs(&self) -> Result<usize> {
         let count: i64 = sqlx::query_scalar(r#"SELECT COUNT(content) FROM web_log"#)
             .fetch_one(&self.pool)
             .await?;

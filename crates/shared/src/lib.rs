@@ -6,3 +6,4 @@ pub mod mnt_protocols;
 pub mod models;
 pub mod objectid;
 pub mod streams;
+pub mod secret;

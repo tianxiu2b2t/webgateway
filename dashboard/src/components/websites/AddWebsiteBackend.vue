@@ -1,7 +1,7 @@
 <template>
     <div class="backend">
-        <InputEdit label="回源地址" />
-        <InputEdit label="权衡" type="number" style="width: auto" />
+        <InputEdit label="回源地址" placeholder="http://127.0.0.1:8080" />
+        <InputEdit label="权衡" type="number" style="width: auto" value="0" />
     </div>
 </template>
 

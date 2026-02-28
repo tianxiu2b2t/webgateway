@@ -1,6 +1,6 @@
 <template>
     <Dialog>
-        <template #header>添加解析</template>
+        <template #header>添加证书</template>
         <template #content>
             <div class="content">
                 <InputEdit
@@ -8,16 +8,9 @@
                     placeholder="仅作为标识使用"
                     @update:value="(v) => (name = v)"
                 />
-                <InputEdit
-                    label="域名"
-                    :muitloptions="true"
-                    @update:tags="(v) => (domains = v)"
-                />
-                <InputEdit label="DNS 服务商" :disabled="true" value="腾讯云" />
-                <Tencent
-                    v-if="type == 'tencent'"
-                    @update:value="(v) => (tencent_result = v)"
-                ></Tencent>
+                <SelectOptions />
+                <InputEdit label="证书公钥" :textarea="true" />
+                <InputEdit label="证书私钥" :textarea="true" />
             </div>
         </template>
         <template #footer
@@ -33,14 +26,13 @@ import DialogClose from '../../plugins/dialog/DialogClose.vue';
 import InputEdit from '../InputEdit.vue';
 import { addDialog } from '../../plugins/dialog';
 import DraftContent from '../../plugins/dialog/templates/DraftContent.vue';
-import Tencent from './dnsproviders/Tencent.vue';
 import { create } from '../../apis/dnsproviders';
 import addPresentation from '../../plugins/presentation';
-import type { DNSProviderType } from '../../types/dnsproviders';
+import SelectOptions from '../SelectOptions.vue';
 
 const emit = defineEmits(['close']);
 const name = ref('');
-const type = ref<DNSProviderType>('tencent');
+const type = ref('tencent');
 const tencent_result = ref({});
 const domains = ref([]);
 

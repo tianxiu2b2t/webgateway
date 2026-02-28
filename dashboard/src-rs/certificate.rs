@@ -3,9 +3,7 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use acmex::{
-    AcmeConfig, ChallengeSolverRegistry, Contact, Dns01Solver, DnsProvider,
-};
+use acmex::{AcmeConfig, ChallengeSolverRegistry, Contact, Dns01Solver, DnsProvider};
 use shared::{
     database::{
         certificate::DatabaseCertificateRepository, dnsprovider::DatabaseDNSProviderQuery,
@@ -73,8 +71,7 @@ async fn inner_sign(cert: NeedSignCertificate) -> anyhow::Result<()> {
                 tencent.secret_key,
                 "".to_string(),
             )
-        }
-        // _ => unreachable!(),
+        } // _ => unreachable!(),
     });
 
     let mut solver_registry = ChallengeSolverRegistry::new();

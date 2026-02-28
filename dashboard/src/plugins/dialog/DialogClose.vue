@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import Button from '../../components/Button.vue';
+const props = defineProps({
+    type: {
+        type: String,
+        default: 'button',
+    },
+});
 </script>
 
 <template>
     <div class="dialog-close-root">
         <div class="dialog-close-container">
             <Button :reverse-color="true" @click="$emit('cancel')">取消</Button
-            ><Button @click="$emit('confirm')">确定</Button>
+            ><Button @click="$emit('confirm')">{{
+                type === 'submit' ? '提交' : '确定'
+            }}</Button>
         </div>
     </div>
 </template>

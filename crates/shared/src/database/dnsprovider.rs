@@ -1,6 +1,7 @@
 use async_trait::async_trait;
+use sqlx::types::Json;
 
-use crate::{database::Database, models::dnsprovider::DatabaseDNSProvider, objectid::ObjectId};
+use crate::{database::Database, models::dnsprovider::{CreateDatabaseDNSProvider, DatabaseDNSProvider}, objectid::ObjectId};
 use anyhow::Result;
 
 #[async_trait]
@@ -15,8 +16,8 @@ impl DatabaseDNSProviderInitializer for Database {
             r#"
             CREATE TABLE IF NOT EXISTS dns_providers (
                 id TEXT PRIMARY KEY,
-                provider_type TEXT NOT NULL,
-                provider_config JSONB NOT NULL,
+                name TEXT,
+                provider JSONB NOT NULL,
                 domains TEXT[] NOT NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -33,6 +34,12 @@ impl DatabaseDNSProviderInitializer for Database {
 pub trait DatabaseDNSProviderQuery {
     async fn get_dns_providers(&self) -> Result<Vec<DatabaseDNSProvider>>;
     async fn get_dns_provider_by_id(&self, id: &ObjectId) -> Result<DatabaseDNSProvider>;
+    async fn get_total_of_dns_providers(&self) -> Result<usize>;
+    async fn get_dns_providers_by_page(
+        &self,
+        page: usize,
+        limit: usize,
+    ) -> Result<Vec<DatabaseDNSProvider>>;
 }
 
 #[async_trait]
@@ -57,6 +64,50 @@ impl DatabaseDNSProviderQuery for Database {
         .bind(id)
         .fetch_one(&self.pool)
         .await?;
+        Ok(row)
+    }
+
+    async fn get_total_of_dns_providers(&self) -> Result<usize> {
+        let count: i64 = sqlx::query_scalar(r#"SELECT COUNT(id) FROM dns_providers"#)
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(count as usize)
+    }
+
+    async fn get_dns_providers_by_page(
+        &self,
+        page: usize,
+        limit: usize,
+    ) -> Result<Vec<DatabaseDNSProvider>> {
+        let dnsproviders: Vec<DatabaseDNSProvider> = sqlx::query_as(
+            r#"SELECT * FROM dns_providers ORDER BY created_at DESC LIMIT $1 OFFSET $2"#,
+        )
+        .bind(limit as i64)
+        .bind((std::cmp::max(0, page) * limit) as i64)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(dnsproviders)
+    }
+}
+
+
+#[async_trait]
+pub trait DatabaseDNSProviderSet {
+    async fn create_dns_provider(&self, dnsprovider: &CreateDatabaseDNSProvider) -> Result<DatabaseDNSProvider>;
+}
+
+#[async_trait]
+impl DatabaseDNSProviderSet for Database {
+    async fn create_dns_provider(&self, dnsprovider: &CreateDatabaseDNSProvider) -> Result<DatabaseDNSProvider> {
+        // create, means insert
+        let row = sqlx::query_as::<_, DatabaseDNSProvider>
+            (r#"INSERT INTO dns_providers (id, name, provider, domains) VALUES ($1, $2, $3, $4) RETURNING *"#)
+            .bind(ObjectId::default())
+            .bind(&dnsprovider.name)
+            .bind(Json(&dnsprovider.provider))
+            .bind(&dnsprovider.domains)
+            .fetch_one(&self.pool)
+            .await?;
         Ok(row)
     }
 }

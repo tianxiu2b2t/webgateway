@@ -2,18 +2,19 @@ use axum::{Router, extract::Query, middleware, routing::get};
 use shared::database::get_database;
 
 use crate::{
-    auth::middle_refresh_token, database::log::WebLogManager, models::{
-        auth::AuthJWTInfoExtract,
+    auth::middle_refresh_token,
+    database::log::WebLogManager,
+    models::{
         log::{Log, LogQueryParams},
-    }, response::APIResponse
+    },
+    response::APIResponse,
 };
 
-pub async fn info(AuthJWTInfoExtract(_): AuthJWTInfoExtract) -> APIResponse<usize> {
-    APIResponse::result(get_database().get_web_logs_of_total().await)
+pub async fn info() -> APIResponse<usize> {
+    APIResponse::result(get_database().get_total_of_web_logs().await)
 }
 
 pub async fn paged(
-    AuthJWTInfoExtract(_): AuthJWTInfoExtract,
     Query(query): Query<LogQueryParams>,
 ) -> APIResponse<Vec<Log>> {
     APIResponse::result(
