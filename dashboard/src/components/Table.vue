@@ -1,6 +1,6 @@
 <template>
     <Panel style="padding: 0px">
-        <div style="padding: 24px"><slot name="#header"></slot></div>
+        <div style="padding: 24px"><slot name="header"></slot></div>
         <table class="table">
             <thead class="thead">
                 <tr class="tr">

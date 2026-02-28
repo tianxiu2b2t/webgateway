@@ -1,6 +1,6 @@
 <template>
     <Dialog>
-        <template #header>添加站点</template>
+        <template #header>添加解析</template>
         <template #content>
             <div class="content">
                 <InputEdit
@@ -18,7 +18,6 @@
                 />
                 <InputEdit
                     label="网站证书"
-                    placeholder="留空自动选择证书"
                     @update:value="(v) => (config.cert.value = v)"
                 />
                 <div>

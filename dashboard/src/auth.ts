@@ -22,8 +22,12 @@ export async function login(username: string, totp: string): Promise<boolean> {
 
 export function getLocalToken(): AuthResponse | null {
     const data = localStorage.getItem('token');
-    const token: AuthResponse = data ? JSON.parse(data) : null;
-    return +new Date(token?.exp_at) < +new Date() ? null : token;
+    try {
+        const token: AuthResponse = data ? JSON.parse(data) : null;
+        return +new Date(token?.exp_at) < +new Date() ? null : token;
+    } catch (e) {
+        return null;
+    }
 }
 
 export function getToken(redirect: boolean = true): string | undefined {

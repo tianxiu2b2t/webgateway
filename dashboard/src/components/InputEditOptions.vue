@@ -96,6 +96,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    options: {
+        type: Array as () => string[],
+        default: () => [],
+    },
 });
 const container = ref<HTMLDivElement>();
 const value = ref<string>(props.value);

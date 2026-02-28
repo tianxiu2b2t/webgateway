@@ -3,7 +3,9 @@
         :config="logConfig"
         :data="data"
         @current-page="(v) => (currentPage = v)"
-    ></Table>
+    >
+        <template #header>系统日志</template>
+    </Table>
 </template>
 
 <script setup lang="ts">

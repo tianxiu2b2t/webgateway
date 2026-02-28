@@ -5,10 +5,12 @@ let dialogId = 0;
 
 const defaultOptions: DialogOptions = {
     preventCancel: false,
+    preventConfirm: true,
 };
 
 export interface DialogOptions {
     preventCancel?: boolean;
+    preventConfirm?: boolean;
 }
 
 export interface DialogComponent {
@@ -16,18 +18,26 @@ export interface DialogComponent {
     id: number;
     out: boolean;
     options: DialogOptions;
+    props?: Record<string, any>;
 }
 
-export function addDialog(dialog: Component, options?: DialogOptions) {
+export function addDialog(
+    dialog: Component,
+    props?: Record<string, any>,
+    options?: DialogOptions,
+): number {
+    let id = dialogId++;
     inner.value.push({
         component: markRaw(dialog),
-        id: dialogId++,
+        id,
         out: false,
         options: {
             ...defaultOptions,
             ...options,
         },
+        props,
     });
+    return id;
 }
 
 export function removeDialog(id: number) {
@@ -42,13 +52,25 @@ export function removeDialog(id: number) {
 }
 
 export function removeDialogFromCancel(id: number) {
-    console.log(id);
     const component = inner.value.find((dialog) => dialog.id === id);
     if (!component) {
         return;
     }
 
     if (component.options.preventCancel) {
+        return;
+    }
+
+    removeDialog(id);
+}
+
+export function removeDialogFromConfirm(id: number) {
+    const component = inner.value.find((dialog) => dialog.id === id);
+    if (!component) {
+        return;
+    }
+
+    if (component.options.preventConfirm) {
         return;
     }
 

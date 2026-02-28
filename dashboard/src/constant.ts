@@ -1,5 +1,5 @@
 import ky from 'ky';
-import type { APIResponse } from './types';
+import type { APIResponse, AuthResponse } from './types';
 import { createRouter, createWebHistory } from 'vue-router';
 import { checkToken, getToken } from './auth';
 
@@ -22,10 +22,21 @@ export const got = ky.create({
                 try {
                     resp = await response.json();
                 } catch (e) {}
-                if (response.headers.has('Refresh-Authorization')) {
-                    const token = response.headers.get('Refresh-Authorization');
-                    if (token) {
-                    }
+                if (
+                    response.headers.has('Refresh-Token') &&
+                    response.headers.has('Refresh-Token-Expired')
+                ) {
+                    const token = response.headers.get(
+                        'Refresh-Token',
+                    ) as string;
+                    const expired = response.headers.get(
+                        'Refresh-Token-Expired',
+                    ) as string;
+                    const auth: AuthResponse = {
+                        token,
+                        exp_at: expired,
+                    };
+                    localStorage.setItem('token', JSON.stringify(auth));
                 }
                 return new Response(JSON.stringify(resp), response);
             },

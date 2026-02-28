@@ -36,6 +36,10 @@ onMounted(() => {
         0px 11px 15px -7px rgba(0, 0, 0, 0.2),
         0px 24px 38px 3px rgba(0, 0, 0, 0.12),
         0px 9px 46px 8px rgba(0, 0, 0, 0.12);
+    --dialog-panel-color: rgb(255, 255, 255);
+}
+:root.dark {
+    --dialog-panel-color: rgb(24, 24, 24);
 }
 </style>
 <style scoped>
@@ -163,5 +167,10 @@ onMounted(() => {
 }
 .dialog-header + .dialog-content {
     padding-top: 0px;
+}
+.panel {
+    background-color: var(--dialog-panel-color);
+    border-radius: 12px;
+    min-width: 480px;
 }
 </style>
