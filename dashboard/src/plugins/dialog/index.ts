@@ -5,7 +5,7 @@ let dialogId = 0;
 
 const defaultOptions: DialogOptions = {
     preventCancel: false,
-    preventConfirm: true,
+    preventConfirm: false,
 };
 
 export interface DialogOptions {

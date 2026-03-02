@@ -2,8 +2,8 @@
     <svg
         aria-hidden="true"
         :style="{
-            width: props.size || props.width,
-            height: props.size || props.height,
+            width,
+            height,
             color,
         }"
     >
@@ -11,6 +11,14 @@
     </svg>
 </template>
 <script setup lang="ts">
+import { computed } from 'vue';
+
+const width = computed(() =>
+    props.size == 'default' ? undefined : props.size || props.width,
+);
+const height = computed(() =>
+    props.size == 'default' ? undefined : props.size || props.height,
+);
 const props = defineProps({
     name: String,
     color: String,

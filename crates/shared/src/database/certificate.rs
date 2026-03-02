@@ -192,7 +192,7 @@ use async_trait::async_trait;
 
 use crate::{
     database::Database,
-    models::certificate::{DatabaseCertificate, NeedSignCertificate, UpdateCertificate},
+    models::certificate::{CreateCertificateMethod, DatabaseCertificate, NeedSignCertificate, UpdateCertificate},
 };
 
 #[async_trait]
@@ -232,6 +232,11 @@ pub trait DatabaseCertificateRepository {
     async fn get_will_sign_certificates(&self) -> Result<Vec<NeedSignCertificate>>;
 
     async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()>;
+    async fn get_total_of_certificates(&self) -> Result<usize>;
+    async fn get_certificates_by_page(&self, page: usize,
+        limit: usize) -> Result<Vec<DatabaseCertificate>>;
+
+    async fn create_certificate(&self, cert: &CreateCertificateMethod) -> Result<()>;
 }
 
 #[async_trait]
@@ -266,6 +271,33 @@ impl DatabaseCertificateRepository for Database {
         .bind(cert.id)
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    async fn get_total_of_certificates(&self) -> Result<usize> {
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(id) FROM certificates")
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(count as usize)
+    }
+
+    async fn get_certificates_by_page(
+        &self,
+        page: usize,
+        limit: usize,
+    ) -> Result<Vec<DatabaseCertificate>> {
+        let certificates: Vec<DatabaseCertificate> = sqlx::query_as(
+            r#"SELECT * FROM certificates ORDER BY created_at DESC LIMIT $1 OFFSET $2"#,
+        )
+        .bind(limit as i64)
+        .bind((std::cmp::max(0, page) * limit) as i64)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(certificates)
+    }
+
+    async fn create_certificate(&self, cert: &CreateCertificateMethod) -> Result<()> {
         Ok(())
     }
 }

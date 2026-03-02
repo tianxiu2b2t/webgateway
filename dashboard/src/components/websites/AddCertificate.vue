@@ -6,11 +6,28 @@
                 <InputEdit
                     label="名称"
                     placeholder="仅作为标识使用"
-                    @update:value="(v) => (name = v)"
+                    v-model:value="name"
                 />
-                <SelectOptions />
-                <InputEdit label="证书公钥" :textarea="true" />
-                <InputEdit label="证书私钥" :textarea="true" />
+                <SelectOptions
+                    :data="['自动签发', '手动上传']"
+                    v-model:active="active"
+                />
+                <template v-if="active == 0">
+                    <InputEdit
+                        label="签发域名"
+                        v-model:tags="domains"
+                        :muitloptions="true"
+                    />
+                    <InputEdit label="域名解析" v-model="domains" />
+                </template>
+                <template v-if="active == 1">
+                    <DragFileIntoInput
+                        ><InputEdit label="证书公钥" :textarea="true"
+                    /></DragFileIntoInput>
+                    <DragFileIntoInput
+                        ><InputEdit label="证书私钥" :textarea="true"
+                    /></DragFileIntoInput>
+                </template>
             </div>
         </template>
         <template #footer
@@ -26,21 +43,21 @@ import DialogClose from '../../plugins/dialog/DialogClose.vue';
 import InputEdit from '../InputEdit.vue';
 import { addDialog } from '../../plugins/dialog';
 import DraftContent from '../../plugins/dialog/templates/DraftContent.vue';
-import { create } from '../../apis/dnsproviders';
-import addPresentation from '../../plugins/presentation';
 import SelectOptions from '../SelectOptions.vue';
+import DragFileIntoInput from '../DragFileIntoInput.vue';
 
 const emit = defineEmits(['close']);
 const name = ref('');
 const type = ref('tencent');
-const tencent_result = ref({});
+const active = ref(0);
 const domains = ref([]);
 
 const modified = ref(false);
 watch(
-    () => [name.value, type.value, tencent_result.value],
+    () => [name.value, type.value, active.value],
     () => {
         modified.value = true;
+        console.log(active.value);
     },
     { deep: true },
 );
@@ -59,24 +76,7 @@ function cancel() {
     }
     emit('close');
 }
-function get_config() {
-    if (type.value == 'tencent') {
-        return tencent_result.value;
-    }
-    return {};
-}
-async function submit() {
-    const resp = await create(
-        name.value,
-        domains.value,
-        type.value,
-        get_config(),
-    );
-    if (resp.status == 200) {
-        addPresentation('添加成功', 'success');
-        emit('close');
-    }
-}
+async function submit() {}
 </script>
 
 <style lang="css" scoped>

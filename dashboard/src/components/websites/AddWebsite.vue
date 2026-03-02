@@ -7,19 +7,17 @@
                     label="匹配域名"
                     :muitloptions="true"
                     placeholder="支持 * 以匹配网站域名"
-                    :tags="config.domains.value"
-                    @update:tags="(v) => (config.domains.value = v)"
+                    v-model:tags="config.domains.value"
                 />
                 <InputEdit
                     label="开放端口"
                     :muitloptions="true"
-                    :tags="config.ports.value"
-                    @update:tags="(v) => (config.ports.value = v)"
+                    v-model:tags="config.ports.value"
                 />
                 <InputEdit
                     label="网站证书"
                     placeholder="留空自动选择证书"
-                    @update:value="(v) => (config.cert.value = v)"
+                    v-model:value="config.cert.value"
                 />
                 <div>
                     <AddWebsiteBackend />

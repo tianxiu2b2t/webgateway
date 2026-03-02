@@ -65,7 +65,7 @@
                 </button>
             </div>
             <fieldset class="inputedit-fieldset">
-                <legend class="inputedit-legend">
+                <legend class="inputedit-legend" v-if="props.label">
                     <span>{{ props.label }}</span>
                 </legend>
             </fieldset>
@@ -92,14 +92,6 @@ const props = defineProps({
         type: String,
         default: '',
     },
-    value: {
-        type: String,
-        default: '',
-    },
-    tags: {
-        type: Array as () => string[],
-        default: () => [],
-    },
     disabled: {
         type: Boolean,
         default: false,
@@ -122,11 +114,14 @@ const props = defineProps({
     },
 });
 const container = ref<HTMLDivElement>();
-const value = ref<string>(props.value);
-const tags = ref<string[]>(props.tags);
+const value = defineModel<string>('value', {
+    default: () => '',
+});
+const tags = defineModel<string[]>('tags', {
+    default: () => [],
+});
 const focus = ref<boolean>(false);
 const placeholder = ref<string>(props.placeholder);
-const emit = defineEmits(['update:value', 'update:tags']);
 defineExpose({
     focus: () => {
         container.value?.querySelector('input')?.focus();
@@ -137,7 +132,6 @@ defineExpose({
 function handleInput(e: Event) {
     const newValue = (e.target as HTMLInputElement).value;
     value.value = newValue;
-    emit('update:value', newValue);
 }
 function handleEnter(e: Event) {
     if (!props.muitloptions) return;
@@ -152,8 +146,6 @@ function handleEnter(e: Event) {
         tags.value.push(newValue);
         value.value = '';
     }
-    emit('update:value', newValue);
-    emit('update:tags', tags.value);
 }
 const hasContent = computed(() => {
     return !isEmpty(value.value) || !isEmpty(tags.value);
@@ -184,7 +176,7 @@ function toggleState() {
 }
 function deleteContent(idx: number) {
     tags.value.splice(idx, 1);
-    emit('update:tags', tags.value);
+    // emit('update:tags', tags.value);
 }
 function clearAll() {
     tags.value = [];
@@ -304,6 +296,7 @@ onMounted(() => {
 }
 .ie-textarea .inputedit-input {
     height: calc(100% - 1.4375em);
+    resize: none;
 }
 .ie-muitl-options .inputedit-input {
     padding: 2.5px 4px 2.5px 8px;

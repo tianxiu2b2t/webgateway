@@ -6,17 +6,17 @@
                 <InputEdit
                     label="名称"
                     placeholder="仅作为标识使用"
-                    @update:value="(v) => (name = v)"
+                    v-model:value="name"
                 />
                 <InputEdit
                     label="域名"
                     :muitloptions="true"
-                    @update:tags="(v) => (domains = v)"
+                    v-model:tags="domains"
                 />
                 <InputEdit label="DNS 服务商" :disabled="true" value="腾讯云" />
                 <Tencent
                     v-if="type == 'tencent'"
-                    @update:value="(v) => (tencent_result = v)"
+                    :result="tencent_result"
                 ></Tencent>
             </div>
         </template>

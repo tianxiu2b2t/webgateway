@@ -115,9 +115,10 @@ use chrono::{DateTime, Utc};
 use pem::parse_many;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row, postgres::PgRow};
+use utils::replace_sensitive_data;
 use x509_parser::prelude::{FromDer, X509Certificate};
 
-use crate::objectid::ObjectId;
+use crate::{objectid::ObjectId, secret::RemovedSensitiveInfo};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseCertificate {
@@ -130,6 +131,22 @@ pub struct DatabaseCertificate {
     pub email: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl RemovedSensitiveInfo for DatabaseCertificate {
+    fn remove_sensitive_info(&self) -> Self {
+        Self {
+            id: self.id,
+            hostnames: self.hostnames.clone(),
+            expires_at: self.expires_at,
+            fullchain: String::new(),
+            private_key: String::new(),
+            dns_provider_id: self.dns_provider_id,
+            email: self.email.as_ref().map(replace_sensitive_data),
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        }
+    }
 }
 
 impl<'r> FromRow<'r, PgRow> for DatabaseCertificate {
@@ -198,4 +215,58 @@ impl UpdateCertificate {
         //    X.509 timestamps can be in UTC (Z) or with offsets; `not_after.timestamp()` gives seconds since epoch.
         Ok(DateTime::from_timestamp(not_after.timestamp(), 0).unwrap())
     }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateCertificate {
+    pub name: Option<String>,
+    #[serde(flatten)]
+    pub content: CreateCertificateMethod,
+}
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type", content = "content")]
+pub enum CreateCertificateMethod {
+    AUTO(CreateCertificateAuto),
+    MANUAL(CreateCertificateManual),
+}
+
+impl<'de> Deserialize<'de> for CreateCertificateMethod {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {   
+        #[derive(Deserialize)]
+        struct Helper {
+            #[serde(rename = "type")]
+            method: String,
+            content: serde_json::Value,
+        }
+
+        let helper = Helper::deserialize(deserializer)?;
+        match helper.method.to_uppercase().as_str() {
+            "AUTO" => Ok(Self::AUTO(CreateCertificateAuto::deserialize(helper.content).map_err(|_| serde::de::Error::custom("Invaild CreateCertificateAuto"))?)),
+            "MANUAL" => Ok(Self::MANUAL(CreateCertificateManual::deserialize(helper.content).map_err(|_| serde::de::Error::custom("Invaild CreateCertificateManual"))?)),
+            _ => Err(serde::de::Error::custom("Invalid CreateCertificateMethod")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateCertificateAuto {
+    pub dns_provider_id: ObjectId,
+    pub email: String,
+    pub hostnames: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateCertificateManual {
+    pub fullchain: String,
+    pub private_key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CertificateQueryParams {
+    pub limit: Option<usize>,
+    pub page: Option<usize>,
 }

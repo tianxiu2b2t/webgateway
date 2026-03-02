@@ -90,6 +90,7 @@ onMounted(() => {
     padding: 0;
     display: flex;
     flex-direction: column;
+    height: auto;
 }
 .dialog-header {
     margin: 0px;
