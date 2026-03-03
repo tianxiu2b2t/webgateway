@@ -111,12 +111,14 @@
 //     }
 // }
 
+use std::net::{Ipv4Addr, Ipv6Addr};
+
 use chrono::{DateTime, Utc};
 use pem::parse_many;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row, postgres::PgRow};
 use utils::replace_sensitive_data;
-use x509_parser::prelude::{FromDer, X509Certificate};
+use x509_parser::prelude::{FromDer, GeneralName, X509Certificate};
 
 use crate::{objectid::ObjectId, secret::RemovedSensitiveInfo};
 
@@ -201,19 +203,7 @@ impl UpdateCertificate {
     }
 
     pub fn expires_at(&self) -> anyhow::Result<DateTime<Utc>> {
-        // 1. Parse the PEM blocks from the fullchain string
-        let pem_blocks = parse_many(self.fullchain.as_bytes())?;
-        // 2. Get the first certificate (leaf)
-        let leaf_pem = pem_blocks
-            .first()
-            .ok_or(anyhow::anyhow!("Failed to get first certificate"))?;
-        // 3. Parse the DER contents as an X.509 certificate
-        let (_, cert) = X509Certificate::from_der(leaf_pem.contents())?;
-        // 4. Extract the `not_after` timestamp
-        let not_after = cert.validity().not_after;
-        // 5. Convert to chrono::DateTime<Utc>
-        //    X.509 timestamps can be in UTC (Z) or with offsets; `not_after.timestamp()` gives seconds since epoch.
-        Ok(DateTime::from_timestamp(not_after.timestamp(), 0).unwrap())
+        get_expired_at(&self.fullchain)
     }
 }
 
@@ -265,8 +255,71 @@ pub struct CreateCertificateManual {
     pub private_key: String,
 }
 
+impl CreateCertificateManual {
+    // check vaild
+    pub fn check(&self) -> anyhow::Result<()> {
+        // 查看是不是一对的
+        if self.fullchain.is_empty() || self.private_key.is_empty() {
+            return Err(anyhow::anyhow!("fullchain or private_key is empty"));
+        }
+
+        Ok(())
+    }
+
+    pub fn expires_at(&self) -> anyhow::Result<DateTime<Utc>> {
+        get_expired_at(&self.fullchain)
+    }
+
+    pub fn hostnames(&self) -> anyhow::Result<Vec<String>> {
+        get_hostnames(&self.fullchain)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CertificateQueryParams {
     pub limit: Option<usize>,
     pub page: Option<usize>,
+}
+
+fn get_expired_at(fullchain: &str) -> anyhow::Result<DateTime<Utc>> {
+        // 1. Parse the PEM blocks from the fullchain string
+        let pem_blocks = parse_many(fullchain.as_bytes())?;
+        // 2. Get the first certificate (leaf)
+        let leaf_pem = pem_blocks
+            .first()
+            .ok_or(anyhow::anyhow!("Failed to get first certificate"))?;
+        // 3. Parse the DER contents as an X.509 certificate
+        let (_, cert) = X509Certificate::from_der(leaf_pem.contents())?;
+        // 4. Extract the `not_after` timestamp
+        let not_after = cert.validity().not_after;
+        // 5. Convert to chrono::DateTime<Utc>
+        //    X.509 timestamps can be in UTC (Z) or with offsets; `not_after.timestamp()` gives seconds since epoch.
+        Ok(DateTime::from_timestamp(not_after.timestamp(), 0).unwrap())
+}
+
+fn get_hostnames(fullchain: &str) -> anyhow::Result<Vec<String>> {
+    let pem_blocks = parse_many(fullchain.as_bytes())?;
+    let leaf_pem = pem_blocks
+        .first()
+        .ok_or(anyhow::anyhow!("Failed to get first certificate"))?;
+    let (_, cert) = X509Certificate::from_der(leaf_pem.contents())?;
+    let mut domains = vec![];
+    while let Some(sans) = cert.subject_alternative_name().unwrap_or_default() {
+        for san in &sans.value.general_names {
+            match san {
+                GeneralName::DNSName(dns_name) => {
+                    domains.push(dns_name.to_string());
+                }
+                GeneralName::IPAddress(ip_name) => {
+                    if ip_name.len() == 4 {
+                        domains.push(Ipv4Addr::from_octets(std::convert::TryInto::<[u8; 4]>::try_into(*ip_name)?).to_string())
+                    } else if ip_name.len() == 16 {
+                        domains.push(Ipv6Addr::from_octets(std::convert::TryInto::<[u8; 16]>::try_into(*ip_name)?).to_string())
+                    } 
+                },
+                _ => {}
+            }
+        }
+    }
+    Ok(domains)
 }

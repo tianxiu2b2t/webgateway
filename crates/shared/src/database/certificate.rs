@@ -192,7 +192,7 @@ use async_trait::async_trait;
 
 use crate::{
     database::Database,
-    models::certificate::{CreateCertificateMethod, DatabaseCertificate, NeedSignCertificate, UpdateCertificate},
+    models::certificate::{CreateCertificate, CreateCertificateMethod, DatabaseCertificate, NeedSignCertificate, UpdateCertificate}, objectid::ObjectId,
 };
 
 #[async_trait]
@@ -236,7 +236,7 @@ pub trait DatabaseCertificateRepository {
     async fn get_certificates_by_page(&self, page: usize,
         limit: usize) -> Result<Vec<DatabaseCertificate>>;
 
-    async fn create_certificate(&self, cert: &CreateCertificateMethod) -> Result<()>;
+    async fn create_certificate(&self, cert: &CreateCertificate) -> Result<DatabaseCertificate>;
 }
 
 #[async_trait]
@@ -297,7 +297,40 @@ impl DatabaseCertificateRepository for Database {
         Ok(certificates)
     }
 
-    async fn create_certificate(&self, cert: &CreateCertificateMethod) -> Result<()> {
-        Ok(())
+    async fn create_certificate(&self, cert: &CreateCertificate) -> Result<DatabaseCertificate> {
+       let res = match &cert.content {
+            CreateCertificateMethod::AUTO(context) => {
+                sqlx::query_as::<_, DatabaseCertificate>(
+                    r#"
+                    INSERT INTO certificates (id, name, hostnames, dns_provider_id, email) VALUES ($1, $2, $3, $4, $5)
+                    RETURNING *
+                "#,
+                )
+                .bind(ObjectId::new())
+                .bind(&cert.name)
+                .bind(&context.hostnames)
+                .bind(context.dns_provider_id)
+                .bind(&context.email)
+                .fetch_one(&self.pool)
+                .await?
+            },
+            CreateCertificateMethod::MANUAL(context) => {
+                sqlx::query_as::<_, DatabaseCertificate>(
+                    r#"
+                    INSERT INTO certificates (id, name, hostnames, fullchain, private_key, expires_at) VALUES ($1, $2, $3, $4, $5, $6)
+                    RETURNING *
+                "#,
+                )
+                .bind(ObjectId::new())
+                .bind(&cert.name)
+                .bind(&context.hostnames()?)
+                .bind(&context.fullchain)
+                .bind(&context.private_key)
+                .bind(context.expires_at()?)
+                .fetch_one(&self.pool)
+                .await?
+            }
+        };
+        Ok(res)
     }
 }

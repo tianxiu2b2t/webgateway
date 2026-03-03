@@ -26,8 +26,8 @@ pub async fn paged(
 
 pub async fn create(
     Json(certificate): Json<CreateCertificate>,
-) -> APIResponse<CreateCertificate> {
-    match certificate.content {
+) -> APIResponse<DatabaseCertificate> {
+    match &certificate.content {
         CreateCertificateMethod::AUTO(content) => {
             if content.hostnames.is_empty() {
                 return APIResponse::error(None, 422, "hostnames is empty");
