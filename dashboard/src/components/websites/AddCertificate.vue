@@ -18,14 +18,21 @@
                         v-model:tags="domains"
                         :muitloptions="true"
                     />
+                    <InputEdit label="签发证书邮箱" v-model="email" />
                     <InputEdit label="域名解析" v-model="domains" />
                 </template>
                 <template v-if="active == 1">
-                    <DragFileIntoInput
-                        ><InputEdit label="证书公钥" :textarea="true"
+                    <DragFileIntoInput v-model:value="fullchain"
+                        ><InputEdit
+                            label="证书公钥"
+                            :textarea="true"
+                            v-model:value="fullchain"
                     /></DragFileIntoInput>
-                    <DragFileIntoInput
-                        ><InputEdit label="证书私钥" :textarea="true"
+                    <DragFileIntoInput v-model:value="privkey"
+                        ><InputEdit
+                            label="证书私钥"
+                            :textarea="true"
+                            v-model:value="privkey"
                     /></DragFileIntoInput>
                 </template>
             </div>
@@ -45,19 +52,27 @@ import { addDialog } from '../../plugins/dialog';
 import DraftContent from '../../plugins/dialog/templates/DraftContent.vue';
 import SelectOptions from '../SelectOptions.vue';
 import DragFileIntoInput from '../DragFileIntoInput.vue';
+import type {
+    CreateCertificateAuto,
+    CreateCertificateManual,
+    CreateCertificateType,
+} from '../../types/certificate';
+import { create } from '../../apis/certificate';
 
 const emit = defineEmits(['close']);
 const name = ref('');
-const type = ref('tencent');
 const active = ref(0);
-const domains = ref([]);
+const email = ref('');
+const domains = ref<string[]>([]);
+const fullchain = ref('');
+const privkey = ref('');
 
 const modified = ref(false);
 watch(
-    () => [name.value, type.value, active.value],
+    () => [name.value, active.value, fullchain.value, privkey.value],
     () => {
         modified.value = true;
-        console.log(active.value);
+        console.log(fullchain.value, privkey.value);
     },
     { deep: true },
 );
@@ -76,7 +91,25 @@ function cancel() {
     }
     emit('close');
 }
-async function submit() {}
+async function submit() {
+    const type: CreateCertificateType = active.value == 0 ? 'auto' : 'manual';
+    const auto_data: CreateCertificateAuto = {
+        dns_provider_id: '',
+        hostnames: domains.value,
+        email: email.value,
+    };
+    const manual_data: CreateCertificateManual = {
+        fullchain: fullchain.value,
+        private_key: privkey.value,
+    };
+    const resp = await create(
+        type,
+        type == 'auto' ? auto_data : manual_data,
+        name.value ? name.value : undefined,
+    );
+    console.log(resp);
+    emit('close');
+}
 </script>
 
 <style lang="css" scoped>

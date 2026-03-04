@@ -28,13 +28,16 @@ pub async fn create(
     Json(certificate): Json<CreateCertificate>,
 ) -> APIResponse<DatabaseCertificate> {
     match &certificate.content {
-        CreateCertificateMethod::AUTO(content) => {
-            if content.hostnames.is_empty() {
+        CreateCertificateMethod::AUTO(context) => {
+            if context.hostnames.is_empty() {
                 return APIResponse::error(None, 422, "hostnames is empty");
             }
         },
-        CreateCertificateMethod::MANUAL(_) => {
+        CreateCertificateMethod::MANUAL(context) => {
             // TODO: check if certificate is valid
+            if let Err(e) = context.vaild() {
+                return APIResponse::error(None, 422, e.to_string());
+            }
         }
     };
     APIResponse::result(get_database().create_certificate(&certificate).await.map(|v| v.remove_sensitive_info()))

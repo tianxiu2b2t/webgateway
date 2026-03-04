@@ -113,12 +113,14 @@
 
 use std::net::{Ipv4Addr, Ipv6Addr};
 
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use pem::parse_many;
+use rcgen::KeyPair;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row, postgres::PgRow};
 use utils::replace_sensitive_data;
-use x509_parser::prelude::{FromDer, GeneralName, X509Certificate};
+use x509_parser::{asn1_rs::ToDer, prelude::{FromDer, GeneralName, X509Certificate}};
 
 use crate::{objectid::ObjectId, secret::RemovedSensitiveInfo};
 
@@ -273,6 +275,10 @@ impl CreateCertificateManual {
     pub fn hostnames(&self) -> anyhow::Result<Vec<String>> {
         get_hostnames(&self.fullchain)
     }
+
+    pub fn vaild(&self) -> anyhow::Result<()> {
+        check_match(&self.fullchain, &self.private_key)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -322,4 +328,30 @@ fn get_hostnames(fullchain: &str) -> anyhow::Result<Vec<String>> {
         }
     }
     Ok(domains)
+}
+
+fn check_match(fullchain: &str, prikey: &str) -> anyhow::Result<()> {
+    // 1. 解析 fullchain，获取叶子证书的裸公钥
+    let fullchain_pems = pem::parse_many(fullchain.as_bytes())?;
+    let leaf_pem = fullchain_pems
+        .iter()
+        .find(|p| p.tag() == "CERTIFICATE")
+        .ok_or_else(|| anyhow::anyhow!("fullchain 中没有证书"))?;
+    let (_, cert) = X509Certificate::from_der(leaf_pem.contents())?;
+    // 裸公钥 = BIT STRING 中的实际数据
+    let cert_pubkey_raw = cert.public_key().subject_public_key.data.to_vec();
+
+    // 2. 解析私钥，获取裸公钥
+    let key_pair = KeyPair::from_pem(prikey)
+        .context("无法解析私钥 PEM")?;
+    let privkey_pubkey_raw = key_pair.public_key_raw();
+
+    // 3. 比较裸公钥
+    println!("cert_pubkey_raw: {:?}", cert_pubkey_raw);
+    println!("privkey_pubkey_raw: {:?}", privkey_pubkey_raw);
+    if cert_pubkey_raw.as_slice() == privkey_pubkey_raw {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("证书与私钥不匹配"))
+    }
 }

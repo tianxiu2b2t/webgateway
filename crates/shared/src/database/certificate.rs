@@ -207,6 +207,7 @@ impl DatabaseCertificateInitializer for Database {
             r#"
             CREATE TABLE IF NOT EXISTS certificates (
                 id TEXT PRIMARY KEY,
+                name TEXT,
                 hostnames TEXT[],
                 fullchain TEXT,
                 private_key TEXT,
@@ -315,6 +316,7 @@ impl DatabaseCertificateRepository for Database {
                 .await?
             },
             CreateCertificateMethod::MANUAL(context) => {
+                println!("test");
                 sqlx::query_as::<_, DatabaseCertificate>(
                     r#"
                     INSERT INTO certificates (id, name, hostnames, fullchain, private_key, expires_at) VALUES ($1, $2, $3, $4, $5, $6)

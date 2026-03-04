@@ -2,6 +2,8 @@ import { gotWithAuth } from '../constant';
 import type { APIResponse } from '../types';
 import type { DatabaseDNSProvider } from '../types/dnsproviders';
 
+const prefix = 'dnsproviders';
+
 export async function create(
     name: string,
     domains: string[],
@@ -9,7 +11,7 @@ export async function create(
     provider_config: any,
 ) {
     const resp = (await (
-        await gotWithAuth.post('dnsproviders/create', {
+        await gotWithAuth.post(`${prefix}/create`, {
             json: {
                 name,
                 domains,
@@ -23,14 +25,14 @@ export async function create(
 
 export async function total() {
     const resp = (await (
-        await gotWithAuth.get('dnsproviders/total')
+        await gotWithAuth.get(`${prefix}/total`)
     ).json()) as APIResponse<number>;
     return resp.data;
 }
 
 export async function fetch(page: number, perPage: number) {
     const resp = (await (
-        await gotWithAuth.get('dnsproviders/page', {
+        await gotWithAuth.get(`${prefix}/page`, {
             searchParams: {
                 page,
                 size: perPage,
