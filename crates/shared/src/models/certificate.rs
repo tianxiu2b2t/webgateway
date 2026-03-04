@@ -304,7 +304,7 @@ fn get_hostnames(fullchain: &str) -> anyhow::Result<Vec<String>> {
         .ok_or(anyhow::anyhow!("Failed to get first certificate"))?;
     let (_, cert) = X509Certificate::from_der(leaf_pem.contents())?;
     let mut domains = vec![];
-    while let Some(sans) = cert.subject_alternative_name().unwrap_or_default() {
+    if let Some(sans) = cert.subject_alternative_name().unwrap_or_default() {
         for san in &sans.value.general_names {
             match san {
                 GeneralName::DNSName(dns_name) => {
