@@ -6,8 +6,8 @@ use std::{
 use anyhow::anyhow;
 use dashmap::DashMap;
 use hyper::{
-    Request, Response,
-    body::{Body, Incoming},
+    Request,
+    body::Incoming,
     client,
     service::service_fn,
 };
@@ -91,7 +91,7 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
         None => stream,
     };
     // if is proxyprotocol
-    let state = Arc::new(ClientState { tls });
+    let state = Arc::new(ClientState { tls, remote_addr: addr.ip() });
     let io = TokioIo::new(final_stream);
     let r = HTTP_BUILDER
         .serve_connection(
@@ -99,8 +99,7 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
             service_fn(move |req: Request<Incoming>| {
                 let state = state.clone();
                 async move {
-                    let resp = handle(req, state).await;
-                    resp
+                    handle(req, state).await
                 }
             }),
         )
@@ -112,20 +111,20 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
 }
 
 pub async fn handle(
-    req: Request<Incoming>,
+    mut req: Request<Incoming>,
     state: Arc<ClientState>,
 ) -> anyhow::Result<hyper::Response<Incoming>> {
     let host = state.tls.clone().map(|v| v.hostname).unwrap_or_else(|| {
-        let h = req
+        req
             .headers()
             .get("host")
-            .and_then(|v| v.to_str().ok().map(|v| v.to_string()));
-        h
+            .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
     });
     if host.is_none() {
         return Err(anyhow!("No Host"));
     }
-    let site = get_website(&host.unwrap())
+    let host = host.unwrap();
+    let site = get_website(&host)
         .await
         .ok_or(anyhow!("No Runner Website"))?;
     // let conn = TcpStream::connect(("192.168.2.254", 23333)).await?;
@@ -137,5 +136,16 @@ pub async fn handle(
             eprintln!("Connection error: {}", err);
         }
     });
-    Ok(c_req.send_request(req).await?)
+    let headers = req.headers_mut();
+    // set X-Real-Ip
+    headers.insert("X-Real-Ip", format!("{}", state.remote_addr).parse()?);
+    headers.insert("X-Forwarded-For", format!("{}", state.remote_addr).parse()?);
+    headers.insert("X-Forwarded-Proto", (match state.tls {
+        Some(_) => "https",
+        None => "http",
+    }).to_string().parse()?);
+    headers.insert("X-Forwarded-Host", host.parse()?);
+    let mut resp = c_req.send_request(req).await?;
+    resp.headers_mut().insert("Server", "WebGateway".parse()?);
+    Ok(resp)
 }

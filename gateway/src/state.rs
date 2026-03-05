@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::{IpAddr, SocketAddr}, sync::Arc};
 
 use anyhow::anyhow;
 use protocols::tls::ProtocolTLS;
@@ -49,4 +49,5 @@ impl WebSiteRunner {
 #[derive(Debug, Clone)]
 pub struct ClientState {
     pub tls: Option<ProtocolTLS>,
+    pub remote_addr: IpAddr,
 }
