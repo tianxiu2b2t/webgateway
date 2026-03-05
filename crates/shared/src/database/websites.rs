@@ -40,7 +40,10 @@ impl DatabaseWebsiteInitializer for Database {
 #[async_trait::async_trait]
 pub trait DatabaseWebsiteQuery {
     async fn get_websites(&self) -> anyhow::Result<Vec<DatabaseWebsite>>;
-    async fn get_websites_before_updated_at(&self, updated_at: &chrono::DateTime<chrono::Utc>) -> anyhow::Result<Vec<DatabaseWebsite>>;
+    async fn get_websites_before_updated_at(
+        &self,
+        updated_at: &chrono::DateTime<chrono::Utc>,
+    ) -> anyhow::Result<Vec<DatabaseWebsite>>;
     async fn get_website(&self, id: &ObjectId) -> anyhow::Result<DatabaseWebsite>;
 }
 
@@ -54,11 +57,15 @@ impl DatabaseWebsiteQuery for Database {
         Ok(rows)
     }
 
-    async fn get_websites_before_updated_at(&self, updated_at: &chrono::DateTime<chrono::Utc>) -> anyhow::Result<Vec<DatabaseWebsite>> {
-        let rows = sqlx::query_as::<_, DatabaseWebsite>("SELECT * FROM websites WHERE updated_at > $1;")
-            .bind(updated_at)
-            .fetch_all(&self.pool)
-            .await?;
+    async fn get_websites_before_updated_at(
+        &self,
+        updated_at: &chrono::DateTime<chrono::Utc>,
+    ) -> anyhow::Result<Vec<DatabaseWebsite>> {
+        let rows =
+            sqlx::query_as::<_, DatabaseWebsite>("SELECT * FROM websites WHERE updated_at > $1;")
+                .bind(updated_at)
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows)
     }
 

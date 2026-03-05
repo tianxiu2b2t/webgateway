@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::task::{Context, Poll};
 
 use rustls::{
@@ -120,7 +121,7 @@ impl AsyncWrite for BackendConnection {
 // ---------- 连接池配置 ----------
 #[derive(Debug, Clone)]
 pub struct BackendConnectionPoolConfig {
-    pub target: SocketAddr,
+    pub targets: Vec<SocketAddr>,
     pub max_connections: usize, // 改为 usize，用 0 表示无限制
     pub tls: bool,
     pub tls_config: Option<Arc<ClientConfig>>,
@@ -130,7 +131,17 @@ pub struct BackendConnectionPoolConfig {
 impl BackendConnectionPoolConfig {
     pub fn new(target: SocketAddr) -> Self {
         Self {
-            target,
+            targets: vec![target],
+            max_connections: 0,
+            tls: false,
+            tls_config: None,
+            hostname: None,
+        }
+    }
+
+    pub fn new_from_targets(targets: Vec<SocketAddr>) -> Self {
+        Self {
+            targets,
             max_connections: 0,
             tls: false,
             tls_config: None,
@@ -151,12 +162,13 @@ impl BackendConnectionPoolConfig {
     }
 }
 
-// ---------- 连接池核心 ----------
+// ---------- 修改后的连接池 ----------
 #[derive(Debug)]
 pub struct BackendConnectionPool {
     config: BackendConnectionPoolConfig,
-    idle: Mutex<VecDeque<BackendConnection>>, // 空闲连接队列
-    semaphore: Arc<Semaphore>,                // 最大连接数信号量
+    idle: Mutex<VecDeque<BackendConnection>>,
+    semaphore: Arc<Semaphore>,
+    next_index: AtomicUsize, // 新增：轮询索引
 }
 
 impl BackendConnectionPool {
@@ -170,20 +182,18 @@ impl BackendConnectionPool {
             config,
             idle: Mutex::new(VecDeque::new()),
             semaphore: Arc::new(Semaphore::new(max)),
+            next_index: AtomicUsize::new(0),
         })
     }
 
-    /// 从池中获取一个连接（自动等待）
+    /// 从池中获取一个连接
     pub async fn get(self: &Arc<Self>) -> anyhow::Result<PooledConnection> {
-        // 获取 permit（信号量）
         let permit = self.semaphore.clone().acquire_owned().await?;
 
-        // 循环尝试获取健康连接
+        // 先尝试从空闲队列取健康连接（不变）
         loop {
-            // 1. 尝试从空闲队列取一个
             let mut idle = self.idle.lock().await;
             if let Some(mut conn) = idle.pop_front() {
-                // 健康检查
                 if conn.is_healthy().await {
                     return Ok(PooledConnection {
                         conn: Some(conn),
@@ -191,25 +201,15 @@ impl BackendConnectionPool {
                         _permit: permit,
                     });
                 } else {
-                    // 不健康，关闭连接，释放 idle 锁，继续循环
                     drop(conn.close().await);
-                    // 继续循环，再次尝试取下一个空闲连接
-                    // 注意：permit 仍然有效，我们没有创建新连接，因此不会超过最大连接数
                     continue;
                 }
             }
-            // 没有空闲连接了，跳出循环去创建新连接
             break;
         }
 
-        // 2. 创建新连接（此时没有空闲连接）
-        let conn = if self.config.tls {
-            let config = self.config.tls_config.clone().expect("TLS config missing");
-            BackendConnection::new_tls(self.config.target, config, self.config.hostname.clone())
-                .await?
-        } else {
-            BackendConnection::new_tcp(self.config.target).await?
-        };
+        // 没有空闲连接，创建新连接（需要从多个后端中选择）
+        let conn = self.try_create_connection().await?;
 
         Ok(PooledConnection {
             conn: Some(conn),
@@ -218,23 +218,52 @@ impl BackendConnectionPool {
         })
     }
 
-    /// 归还连接（内部方法）
+    /// 尝试连接一个后端，轮询所有地址直到成功
+    async fn try_create_connection(&self) -> anyhow::Result<BackendConnection> {
+        let targets = &self.config.targets;
+        if targets.is_empty() {
+            return Err(anyhow::anyhow!("No backend targets configured"));
+        }
+
+        // 轮询选择一个起始索引
+        let start = self.next_index.fetch_add(1, Ordering::Relaxed) % targets.len();
+        for i in 0..targets.len() {
+            let idx = (start + i) % targets.len();
+            let addr = targets[idx];
+            match self.connect_to_addr(addr).await {
+                Ok(conn) => return Ok(conn),
+                Err(e) => {
+                    tracing::warn!("Failed to connect to {}: {}", addr, e);
+                    // 继续尝试下一个
+                }
+            }
+        }
+        Err(anyhow::anyhow!("All backends are unreachable"))
+    }
+
+    /// 根据配置连接到指定地址
+    async fn connect_to_addr(&self, addr: SocketAddr) -> anyhow::Result<BackendConnection> {
+        if self.config.tls {
+            let config = self.config.tls_config.clone().expect("TLS config missing");
+            BackendConnection::new_tls(addr, config, self.config.hostname.clone()).await
+        } else {
+            BackendConnection::new_tcp(addr).await
+        }
+    }
+
+    /// 归还连接（不变）
     async fn return_connection(&self, mut conn: BackendConnection) {
-        // 健康检查：不健康的连接直接关闭，不归还
         if !conn.is_healthy().await {
             let _ = conn.close().await;
             return;
         }
-
-        // 尝试放回空闲队列
         let mut idle = self.idle.lock().await;
-        // 可以设置一个 max_idle 限制，这里简单起见：总是放回
         idle.push_back(conn);
-        // 注意：permit 此时已经被 drop，信号量计数已经归还
     }
 }
 
 // ---------- 借出连接句柄（自动归还）---------
+#[derive(Debug)]
 pub struct PooledConnection {
     conn: Option<BackendConnection>, // Option 是为了能在 drop 时 move 出来
     pool: Arc<BackendConnectionPool>,

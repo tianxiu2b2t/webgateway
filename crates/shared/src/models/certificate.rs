@@ -4,7 +4,10 @@ use anyhow::Context;
 use chrono::{DateTime, Utc};
 use pem::parse_many;
 use rcgen::KeyPair;
-use rustls::{ServerConfig, pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject}};
+use rustls::{
+    ServerConfig,
+    pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject},
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row, postgres::PgRow};
 use utils::replace_sensitive_data;
@@ -28,10 +31,13 @@ pub struct DatabaseCertificate {
 
 impl<'a> DatabaseCertificate {
     pub fn get_fullchain(&self) -> anyhow::Result<Vec<CertificateDer<'a>>> {
-        Ok(parse_many(&self.fullchain)?.iter().map(|v| {
-            let content = v.contents();
-            CertificateDer::from_slice(content).into_owned()
-        }).collect::<Vec<CertificateDer>>())
+        Ok(parse_many(&self.fullchain)?
+            .iter()
+            .map(|v| {
+                let content = v.contents();
+                CertificateDer::from_slice(content).into_owned()
+            })
+            .collect::<Vec<CertificateDer>>())
     }
     pub fn get_private_key(&self) -> anyhow::Result<PrivateKeyDer<'a>> {
         Ok(PrivateKeyDer::from_pem_slice(self.private_key.as_bytes())?)
@@ -39,7 +45,9 @@ impl<'a> DatabaseCertificate {
     pub fn get_server_config(&'a self) -> anyhow::Result<rustls::ServerConfig> {
         let fullchain = self.get_fullchain()?.to_owned();
         let private_key = self.get_private_key()?;
-        Ok(ServerConfig::builder().with_no_client_auth().with_single_cert(fullchain, private_key)?)
+        Ok(ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(fullchain, private_key)?)
     }
 }
 
@@ -55,7 +63,7 @@ impl RemovedSensitiveInfo for DatabaseCertificate {
             email: self.email.as_ref().map(replace_sensitive_data),
             created_at: self.created_at,
             updated_at: self.updated_at,
-            name: self.name.clone()
+            name: self.name.clone(),
         }
     }
 }
@@ -117,7 +125,6 @@ impl UpdateCertificate {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateCertificate {
     pub name: Option<String>,
@@ -135,7 +142,7 @@ impl<'de> Deserialize<'de> for CreateCertificateMethod {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
-    {   
+    {
         #[derive(Deserialize)]
         struct Helper {
             #[serde(rename = "type")]
@@ -145,8 +152,14 @@ impl<'de> Deserialize<'de> for CreateCertificateMethod {
 
         let helper = Helper::deserialize(deserializer)?;
         match helper.method.to_uppercase().as_str() {
-            "AUTO" => Ok(Self::AUTO(CreateCertificateAuto::deserialize(helper.content).map_err(|_| serde::de::Error::custom("Invaild CreateCertificateAuto"))?)),
-            "MANUAL" => Ok(Self::MANUAL(CreateCertificateManual::deserialize(helper.content).map_err(|_| serde::de::Error::custom("Invaild CreateCertificateManual"))?)),
+            "AUTO" => Ok(Self::AUTO(
+                CreateCertificateAuto::deserialize(helper.content)
+                    .map_err(|_| serde::de::Error::custom("Invaild CreateCertificateAuto"))?,
+            )),
+            "MANUAL" => Ok(Self::MANUAL(
+                CreateCertificateManual::deserialize(helper.content)
+                    .map_err(|_| serde::de::Error::custom("Invaild CreateCertificateManual"))?,
+            )),
             _ => Err(serde::de::Error::custom("Invalid CreateCertificateMethod")),
         }
     }
@@ -196,19 +209,19 @@ pub struct CertificateQueryParams {
 }
 
 fn get_expired_at(fullchain: &str) -> anyhow::Result<DateTime<Utc>> {
-        // 1. Parse the PEM blocks from the fullchain string
-        let pem_blocks = parse_many(fullchain.as_bytes())?;
-        // 2. Get the first certificate (leaf)
-        let leaf_pem = pem_blocks
-            .first()
-            .ok_or(anyhow::anyhow!("Failed to get first certificate"))?;
-        // 3. Parse the DER contents as an X.509 certificate
-        let (_, cert) = X509Certificate::from_der(leaf_pem.contents())?;
-        // 4. Extract the `not_after` timestamp
-        let not_after = cert.validity().not_after;
-        // 5. Convert to chrono::DateTime<Utc>
-        //    X.509 timestamps can be in UTC (Z) or with offsets; `not_after.timestamp()` gives seconds since epoch.
-        Ok(DateTime::from_timestamp(not_after.timestamp(), 0).unwrap())
+    // 1. Parse the PEM blocks from the fullchain string
+    let pem_blocks = parse_many(fullchain.as_bytes())?;
+    // 2. Get the first certificate (leaf)
+    let leaf_pem = pem_blocks
+        .first()
+        .ok_or(anyhow::anyhow!("Failed to get first certificate"))?;
+    // 3. Parse the DER contents as an X.509 certificate
+    let (_, cert) = X509Certificate::from_der(leaf_pem.contents())?;
+    // 4. Extract the `not_after` timestamp
+    let not_after = cert.validity().not_after;
+    // 5. Convert to chrono::DateTime<Utc>
+    //    X.509 timestamps can be in UTC (Z) or with offsets; `not_after.timestamp()` gives seconds since epoch.
+    Ok(DateTime::from_timestamp(not_after.timestamp(), 0).unwrap())
 }
 
 fn get_hostnames(fullchain: &str) -> anyhow::Result<Vec<String>> {
@@ -226,11 +239,21 @@ fn get_hostnames(fullchain: &str) -> anyhow::Result<Vec<String>> {
                 }
                 GeneralName::IPAddress(ip_name) => {
                     if ip_name.len() == 4 {
-                        domains.push(Ipv4Addr::from_octets(std::convert::TryInto::<[u8; 4]>::try_into(*ip_name)?).to_string())
+                        domains.push(
+                            Ipv4Addr::from_octets(std::convert::TryInto::<[u8; 4]>::try_into(
+                                *ip_name,
+                            )?)
+                            .to_string(),
+                        )
                     } else if ip_name.len() == 16 {
-                        domains.push(Ipv6Addr::from_octets(std::convert::TryInto::<[u8; 16]>::try_into(*ip_name)?).to_string())
-                    } 
-                },
+                        domains.push(
+                            Ipv6Addr::from_octets(std::convert::TryInto::<[u8; 16]>::try_into(
+                                *ip_name,
+                            )?)
+                            .to_string(),
+                        )
+                    }
+                }
                 _ => {}
             }
         }
@@ -250,8 +273,7 @@ fn check_match(fullchain: &str, prikey: &str) -> anyhow::Result<()> {
     let cert_pubkey_raw = cert.public_key().subject_public_key.data.to_vec();
 
     // 2. 解析私钥，获取裸公钥
-    let key_pair = KeyPair::from_pem(prikey)
-        .context("无法解析私钥 PEM")?;
+    let key_pair = KeyPair::from_pem(prikey).context("无法解析私钥 PEM")?;
     let privkey_pubkey_raw = key_pair.public_key_raw();
 
     // 3. 比较裸公钥

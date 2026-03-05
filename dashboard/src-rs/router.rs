@@ -1,9 +1,9 @@
 use axum::Router;
 
+pub mod certificate;
 pub mod dnsprovider;
 pub mod log;
 pub mod website;
-pub mod certificate;
 
 pub fn get_router() -> Router {
     Router::new()

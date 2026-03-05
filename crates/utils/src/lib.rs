@@ -35,7 +35,6 @@ pub fn default_true() -> bool {
     true
 }
 
-
 // 替换敏感数据
 pub fn replace_sensitive_data(data: impl Into<String>) -> String {
     let d = data.into();

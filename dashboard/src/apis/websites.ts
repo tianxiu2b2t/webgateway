@@ -1,5 +1,6 @@
 import { gotWithAuth } from '../constant';
-import type { APIResponse, Website, WebsiteCreateRequest } from '../types';
+import type { APIResponse } from '../types';
+import type { Website, WebsiteCreateRequest } from '../types/websites';
 
 const prefix = 'websites';
 

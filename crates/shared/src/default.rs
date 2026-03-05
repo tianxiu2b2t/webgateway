@@ -1,9 +1,7 @@
 use std::time::Duration;
 
 use rcgen::{CertifiedKey, generate_simple_self_signed};
-use rustls::{
-    pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer},
-};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 
 pub fn default_website_config_timeout() -> Duration {
     Duration::from_secs(10)
@@ -17,9 +15,10 @@ pub fn default_database_max_connections() -> u32 {
     10
 }
 
-pub fn sign_default_certificates() -> anyhow::Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>)> {
+pub fn sign_default_certificates()
+-> anyhow::Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>)> {
     let CertifiedKey { cert, signing_key } =
-        generate_simple_self_signed(vec!["localhost".to_string()]).unwrap();
+        generate_simple_self_signed(vec!["webgateway".to_string()]).unwrap();
 
     // Own the certificate DER data
     let cert_der_bytes = cert.der().to_vec();

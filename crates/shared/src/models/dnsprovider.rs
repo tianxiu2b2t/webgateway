@@ -64,7 +64,7 @@ pub struct DatabaseDNSProvider {
     #[serde(flatten)]
     pub provider: DatabaseDNSProviderKind,
     pub domains: Vec<String>,
-        pub name: Option<String>,
+    pub name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -87,8 +87,8 @@ impl<'r> FromRow<'r, PgRow> for DatabaseDNSProvider {
         Ok(Self {
             id: row.try_get("id")?,
             /*
-                            provider_type TEXT NOT NULL,
-                provider_config JSONB NOT NULL, */
+                        provider_type TEXT NOT NULL,
+            provider_config JSONB NOT NULL, */
             provider: row
                 .try_get::<Json<DatabaseDNSProviderKind>, _>("provider")?
                 .0,
@@ -148,7 +148,10 @@ impl<'de> Deserialize<'de> for DatabaseDNSProviderKind {
 
         let helper = Helper::deserialize(deserializer)?;
         match helper.provider_type.to_uppercase().as_str() {
-            "TENCENT" => Ok(Self::TENCENT(DatabaseDNSProviderTencent::deserialize(helper.config).map_err(|_| serde::de::Error::custom("Invaild DNSProviderTencent"))?)),
+            "TENCENT" => Ok(Self::TENCENT(
+                DatabaseDNSProviderTencent::deserialize(helper.config)
+                    .map_err(|_| serde::de::Error::custom("Invaild DNSProviderTencent"))?,
+            )),
             _ => Err(serde::de::Error::custom("Invalid DNSProviderType")),
         }
     }
@@ -192,7 +195,6 @@ pub struct DNSProviderQueryParams {
     pub limit: Option<usize>,
     pub page: Option<usize>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateDatabaseDNSProvider {

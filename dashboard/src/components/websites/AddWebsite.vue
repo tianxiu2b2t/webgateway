@@ -20,8 +20,8 @@
                     :muitloptions="true"
                     v-model:tags="config.cert.value"
                 />
-                <div>
-                    <AddWebsiteBackend />
+                <div v-for="(_, idx) in backends">
+                    <AddWebsiteBackend v-model:result="backends[idx]" />
                 </div>
             </div>
         </template>
@@ -40,21 +40,40 @@ import AddWebsiteBackend from './AddWebsiteBackend.vue';
 import { addDialog } from '../../plugins/dialog';
 import DraftContent from '../../plugins/dialog/templates/DraftContent.vue';
 import { createWebsite } from '../../apis/websites';
-import type { WebsiteCreateRequest } from '../../types';
+import type {
+    WebsiteBackendInput,
+    WebsiteCreateRequest,
+} from '../../types/websites';
 import addPresentation from '../../plugins/presentation';
 
 const emit = defineEmits(['close']);
-const state = reactive({
+const backends = ref<WebsiteBackendInput[]>([
+    {
+        url: '',
+        balance: 0,
+    },
+]);
+const state = reactive<{
+    ports: string[];
+    domains: string[];
+    cert: string[];
+    backends: WebsiteBackendInput[];
+}>({
     ports: ['80', '443'],
     domains: ['*'],
     cert: [],
-    backends: [],
+    backends: [
+        {
+            url: '',
+            balance: 0,
+        },
+    ],
 });
 const config = toRefs(state);
 
 const modified = ref(false);
 watch(
-    () => [state.ports, state.domains, state.cert, state.backends],
+    () => [state.ports, state.domains, state.cert, backends.value],
     () => {
         modified.value = true;
     },
@@ -77,7 +96,10 @@ async function submit() {
         ports: state.ports.map((v) => parseInt(v)),
         hosts: state.domains,
         certificates: state.cert,
-        backends: state.backends,
+        backends: backends.value.map((v) => ({
+            ...v,
+            main: true,
+        })),
     };
     const resp = await createWebsite(data);
     if (resp.status == 200) {

@@ -193,7 +193,11 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     database::Database,
-    models::certificate::{CreateCertificate, CreateCertificateMethod, DatabaseCertificate, NeedSignCertificate, UpdateCertificate}, objectid::ObjectId,
+    models::certificate::{
+        CreateCertificate, CreateCertificateMethod, DatabaseCertificate, NeedSignCertificate,
+        UpdateCertificate,
+    },
+    objectid::ObjectId,
 };
 
 #[async_trait]
@@ -231,13 +235,19 @@ impl DatabaseCertificateInitializer for Database {
 #[async_trait]
 pub trait DatabaseCertificateRepository {
     async fn get_certificates(&self) -> Result<Vec<DatabaseCertificate>>;
-    async fn get_certificates_before_updated_at(&self, before: &chrono::DateTime<chrono::Utc>) -> Result<Vec<DatabaseCertificate>>;
+    async fn get_certificates_before_updated_at(
+        &self,
+        before: &chrono::DateTime<chrono::Utc>,
+    ) -> Result<Vec<DatabaseCertificate>>;
     async fn get_will_sign_certificates(&self) -> Result<Vec<NeedSignCertificate>>;
 
     async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()>;
     async fn get_total_of_certificates(&self) -> Result<usize>;
-    async fn get_certificates_by_page(&self, page: usize,
-        limit: usize) -> Result<Vec<DatabaseCertificate>>;
+    async fn get_certificates_by_page(
+        &self,
+        page: usize,
+        limit: usize,
+    ) -> Result<Vec<DatabaseCertificate>>;
 
     async fn create_certificate(&self, cert: &CreateCertificate) -> Result<DatabaseCertificate>;
 }
@@ -254,7 +264,10 @@ impl DatabaseCertificateRepository for Database {
         Ok(certs)
     }
 
-    async fn get_certificates_before_updated_at(&self, before: &DateTime<Utc>) -> Result<Vec<DatabaseCertificate>> {
+    async fn get_certificates_before_updated_at(
+        &self,
+        before: &DateTime<Utc>,
+    ) -> Result<Vec<DatabaseCertificate>> {
         let certs = sqlx::query_as::<_, DatabaseCertificate>
             ("SELECT id, name, hostnames, fullchain, private_key, dns_provider_id, email, expires_at, created_at, updated_at FROM certificates WHERE updated_at > $1")
             .bind(before)
@@ -310,7 +323,7 @@ impl DatabaseCertificateRepository for Database {
     }
 
     async fn create_certificate(&self, cert: &CreateCertificate) -> Result<DatabaseCertificate> {
-       let res = match &cert.content {
+        let res = match &cert.content {
             CreateCertificateMethod::AUTO(context) => {
                 sqlx::query_as::<_, DatabaseCertificate>(
                     r#"

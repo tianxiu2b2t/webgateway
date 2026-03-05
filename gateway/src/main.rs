@@ -1,13 +1,17 @@
-use shared::{database, logger::{self, LoggerConfig}};
+use shared::{
+    database,
+    logger::{self, LoggerConfig},
+};
 use tokio::signal::ctrl_c;
 
 use crate::config::get_config;
 
+pub mod config;
+pub mod dns;
 pub mod foundation;
 pub mod proxy;
 pub mod state;
 pub mod sync;
-pub mod config;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

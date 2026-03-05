@@ -23,7 +23,7 @@ import { onMounted, ref } from 'vue';
 import Button from '../../components/Button.vue';
 import InputEdit from '../../components/InputEdit.vue';
 import Panel from '../../components/Panel.vue';
-import type { Website } from '../../types';
+import type { Website } from '../../types/websites';
 import { getWebsites } from '../../apis/websites';
 import { addDialog } from '../../plugins/dialog';
 import AddWebsite from '../../components/websites/AddWebsite.vue';

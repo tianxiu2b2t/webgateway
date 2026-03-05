@@ -1,12 +1,16 @@
-use std::{
-    sync::{Arc, LazyLock},
-};
+use std::sync::{Arc, LazyLock};
 
 use rustls::ServerConfig;
 use tokio_schedule::Job;
 use tracing::{Level, event};
 
-use crate::{proxy::listen, sync::{cert::{AutoCertificate, sync_certificates}, websites::sync_websites}};
+use crate::{
+    proxy::listen,
+    sync::{
+        cert::{AutoCertificate, sync_certificates},
+        websites::sync_websites,
+    },
+};
 
 pub mod cert;
 pub mod websites;
@@ -15,7 +19,7 @@ pub static SERVER_CONFIG: LazyLock<Arc<ServerConfig>> = LazyLock::new(|| {
     Arc::new(
         ServerConfig::builder()
             .with_no_client_auth()
-            .with_cert_resolver(Arc::new(AutoCertificate))
+            .with_cert_resolver(Arc::new(AutoCertificate)),
     )
 });
 

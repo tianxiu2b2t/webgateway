@@ -12,14 +12,11 @@ use shared::{
 
 use crate::{auth::middle_refresh_token, response::APIResponse};
 
-pub async fn get_all(
-) -> APIResponse<Vec<DatabaseWebsite>> {
+pub async fn get_all() -> APIResponse<Vec<DatabaseWebsite>> {
     APIResponse::result(get_database().get_websites().await)
 }
 
-pub async fn create(
-    Json(data): Json<CreateDatabaseWebsite>,
-) -> APIResponse<DatabaseWebsite> {
+pub async fn create(Json(data): Json<CreateDatabaseWebsite>) -> APIResponse<DatabaseWebsite> {
     APIResponse::result(get_database().create_website(&data).await)
 }
 

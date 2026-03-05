@@ -1,7 +1,11 @@
 use async_trait::async_trait;
 use sqlx::types::Json;
 
-use crate::{database::Database, models::dnsprovider::{CreateDatabaseDNSProvider, DatabaseDNSProvider}, objectid::ObjectId};
+use crate::{
+    database::Database,
+    models::dnsprovider::{CreateDatabaseDNSProvider, DatabaseDNSProvider},
+    objectid::ObjectId,
+};
 use anyhow::Result;
 
 #[async_trait]
@@ -90,15 +94,20 @@ impl DatabaseDNSProviderQuery for Database {
     }
 }
 
-
 #[async_trait]
 pub trait DatabaseDNSProviderSet {
-    async fn create_dns_provider(&self, dnsprovider: &CreateDatabaseDNSProvider) -> Result<DatabaseDNSProvider>;
+    async fn create_dns_provider(
+        &self,
+        dnsprovider: &CreateDatabaseDNSProvider,
+    ) -> Result<DatabaseDNSProvider>;
 }
 
 #[async_trait]
 impl DatabaseDNSProviderSet for Database {
-    async fn create_dns_provider(&self, dnsprovider: &CreateDatabaseDNSProvider) -> Result<DatabaseDNSProvider> {
+    async fn create_dns_provider(
+        &self,
+        dnsprovider: &CreateDatabaseDNSProvider,
+    ) -> Result<DatabaseDNSProvider> {
         // create, means insert
         let row = sqlx::query_as::<_, DatabaseDNSProvider>
             (r#"INSERT INTO dns_providers (id, name, provider, domains) VALUES ($1, $2, $3, $4) RETURNING *"#)

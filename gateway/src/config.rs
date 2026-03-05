@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
-use shared::default::{default_database_max_connections};
+use shared::default::default_database_max_connections;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MainConfig {
