@@ -1,11 +1,11 @@
 use std::{
-    collections::HashMap,
     sync::{Arc, LazyLock, RwLock as SyncRwLock},
     time::Duration,
 };
 
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
+use regex::Regex;
 use shared::database::{get_database, websites::DatabaseWebsiteQuery};
 use tokio::sync::RwLock;
 
@@ -45,5 +45,52 @@ pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
 }
 
 pub async fn get_website(domain: &str) -> Option<Arc<WebSiteRunner>> {
-    WEBSITES.get(domain).map(|x| x.value().clone())
+    // 1. 先尝试从缓存中获取（读锁）
+    {
+        let cache = CACHE_WEBSITES.read().unwrap();
+        if let Some(cached) = cache.get(domain) {
+            return Some(cached.clone());
+        }
+    } // 读锁在此释放
+
+    // 2. 精确匹配：直接从 WEBSITES 中查找
+    if let Some(entry) = WEBSITES.get(domain) {
+        let site = entry.value().clone();
+        // 插入缓存（写锁，double-check 避免重复插入）
+        let mut cache = CACHE_WEBSITES.write().unwrap();
+        if !cache.contains_key(domain) {
+            cache.insert(domain.to_string(), site.clone(), **CACHE_WEBSITES_EXPIRE);
+        }
+        return Some(site);
+    }
+
+    // 3. 通配符匹配：为了避免长时间持有 DashMap 的锁，先收集所有键值对
+    let entries: Vec<(String, Arc<WebSiteRunner>)> = WEBSITES
+        .iter()
+        .map(|entry| (entry.key().clone(), entry.value().clone()))
+        .collect();
+
+    for (pattern, site) in entries {
+        // 支持 "*" 和含有 * 的模式
+        if pattern == "*" || regex_match(domain, &pattern) {
+            // 插入缓存（写锁，double-check）
+            let mut cache = CACHE_WEBSITES.write().unwrap();
+            if !cache.contains_key(domain) {
+                cache.insert(domain.to_string(), site.clone(), **CACHE_WEBSITES_EXPIRE);
+            }
+            return Some(site);
+        }
+    }
+
+    None
+}
+
+fn regex_match(host: &str, pattern: &str) -> bool {
+    // 转义点号，将 * 替换为正则中的通配符（允许字母、数字、连字符）
+    let pattern = pattern.replace('.', "\\.").replace('*', r"[-\w]+");
+    // 编译正则，如果失败则返回 false（一般不会发生）
+    let Ok(re) = Regex::new(&format!("^{}$", pattern)) else {
+        return false;
+    };
+    re.is_match(host)
 }

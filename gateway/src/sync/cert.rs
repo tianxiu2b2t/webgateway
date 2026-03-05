@@ -72,42 +72,42 @@ pub async fn sync_certificates() -> anyhow::Result<()> {
 }
 
 fn lookup_certificate(host: &str) -> Option<Arc<CertifiedKey>> {
-    // if cached
-    if let Some(certificate) = CACHE_CERTIFICATES.read().unwrap().get(host) {
-        return Some(certificate.clone());
-    }
-    // if not cached
-    if let Some(certificate) = CERTIFICATES.get(host) {
-        CACHE_CERTIFICATES.write().unwrap().insert(
-            host.to_string(),
-            certificate.clone(),
-            **CACHE_CERTIFICATES_EXPIRE,
-        );
-        return Some(certificate.clone());
-    }
-    // else match for it
-    for (domain, certificate) in CERTIFICATES.clone() {
-        // try replace * to regexp and match it
-        if domain == "*" {
-            CACHE_CERTIFICATES.write().unwrap().insert(
-                host.to_string(),
-                certificate.clone(),
-                **CACHE_CERTIFICATES_EXPIRE,
-            );
-            return Some(certificate.clone());
+    // 第一次检查：只读缓存
+    {
+        let cache = CACHE_CERTIFICATES.read().unwrap();
+        if let Some(cert) = cache.get(host) {
+            return Some(cert.clone());
         }
-        // else use regexp and replace * to \w+
+    } // 读锁在此处释放
 
-        let domain_pattern = domain.replace(".", "\\.").replace("*", r"[-\w]+");
-        let regexp = Regex::new(&format!("^{domain_pattern}$")).unwrap();
-        if regexp.is_match(host) {
-            CACHE_CERTIFICATES.write().unwrap().insert(
-                host.to_string(),
-                certificate.clone(),
-                **CACHE_CERTIFICATES_EXPIRE,
-            );
-            return Some(certificate.clone());
+    // 精确匹配：从 CERTIFICATES 中查找
+    if let Some(cert) = CERTIFICATES.get(host) {
+        // 第二次检查（带写锁）
+        let mut cache = CACHE_CERTIFICATES.write().unwrap();
+        if !cache.contains_key(host) {
+            cache.insert(host.to_string(), cert.clone(), **CACHE_CERTIFICATES_EXPIRE);
+        }
+        return Some(cert.clone());
+    }
+
+    // 通配符匹配：遍历 CERTIFICATES 的快照
+    for (domain, cert) in CERTIFICATES.clone() {
+        // 处理 "*" 通配符
+        if domain == "*" || regex_match(host, &domain) {
+            let mut cache = CACHE_CERTIFICATES.write().unwrap();
+            if !cache.contains_key(host) {
+                cache.insert(host.to_string(), cert.clone(), **CACHE_CERTIFICATES_EXPIRE);
+            }
+            return Some(cert.clone());
         }
     }
+
     None
+}
+
+// 辅助函数：将域名模式转换为正则表达式并匹配
+fn regex_match(host: &str, pattern: &str) -> bool {
+    let pattern = pattern.replace('.', "\\.").replace('*', r"[-\w]+");
+    let re = Regex::new(&format!("^{pattern}$")).unwrap();
+    re.is_match(host)
 }

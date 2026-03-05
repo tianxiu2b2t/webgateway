@@ -1,12 +1,16 @@
 use std::{
-    collections::HashMap,
-    net::{SocketAddr, SocketAddrV4},
+    net::SocketAddr,
     sync::{Arc, LazyLock},
 };
 
-use ::protocols::tls::ProtocolTLS;
 use anyhow::anyhow;
-use hyper::{Request, body::Incoming, client, service::service_fn};
+use dashmap::DashMap;
+use hyper::{
+    Request, Response,
+    body::{Body, Incoming},
+    client,
+    service::service_fn,
+};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server::conn::auto::Builder,
@@ -15,12 +19,11 @@ use shared::{
     listener::CustomDualStackTcpListener,
     streams::{BufferStream, WrapperBufferStream},
 };
-use tokio::{net::TcpStream, sync::RwLock, task::JoinHandle};
+use tokio::{net::TcpStream, task::JoinHandle};
 use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
 use crate::{
-    proxy::backends::{BackendConnectionPool, BackendConnectionPoolConfig},
     state::ClientState,
     sync::{SERVER_CONFIG, websites::get_website},
 };
@@ -31,17 +34,10 @@ static HTTP_BUILDER: LazyLock<Builder<TokioExecutor>> = LazyLock::new(|| {
     hyper_util::server::conn::auto::Builder::<TokioExecutor>::new(TokioExecutor::new())
 });
 
-static LISTENERS: LazyLock<RwLock<HashMap<u16, JoinHandle<()>>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
+static LISTENERS: LazyLock<DashMap<u16, JoinHandle<()>>> = LazyLock::new(DashMap::default);
 
 static TLS_ACCEPTOR: LazyLock<Arc<TlsAcceptor>> =
     LazyLock::new(|| Arc::new(TlsAcceptor::from(SERVER_CONFIG.clone())));
-
-static TEMP_CONNECTION_POOL: LazyLock<Arc<BackendConnectionPool>> = LazyLock::new(|| {
-    BackendConnectionPool::new(BackendConnectionPoolConfig::new(SocketAddr::V4(
-        SocketAddrV4::new("192.168.2.254".parse().unwrap(), 5244),
-    )))
-});
 
 async fn accept(listener: CustomDualStackTcpListener) {
     event!(
@@ -77,7 +73,7 @@ pub async fn listen(port: u16) -> anyhow::Result<()> {
         accept(listener).await;
     });
 
-    LISTENERS.write().await.insert(port, thread);
+    LISTENERS.insert(port, thread);
     Ok(())
 }
 
@@ -88,7 +84,7 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
     // event!(Level::INFO, "Proxy protocol: {:?}", proxy_protocol);
     let (stream, tls) = protocols::get_tls_sni(stream).await?;
     let final_stream = match &tls {
-        Some(tls) => {
+        Some(_) => {
             let s = TLS_ACCEPTOR.accept(stream).await?;
             BufferStream::new(WrapperBufferStream::TlsServerBufferStream(Box::new(s)))
         }
@@ -102,11 +98,10 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
             io,
             service_fn(move |req: Request<Incoming>| {
                 let state = state.clone();
-                println!("Request: {:?}", req);
-                async move { 
+                async move {
                     let resp = handle(req, state).await;
-                    println!("Response: {:?}", resp);
-                    resp}
+                    resp
+                }
             }),
         )
         .await;
@@ -128,7 +123,7 @@ pub async fn handle(
         h
     });
     if host.is_none() {
-        return Err(anyhow::anyhow!("No host header"));
+        return Err(anyhow!("No Host"));
     }
     let site = get_website(&host.unwrap())
         .await

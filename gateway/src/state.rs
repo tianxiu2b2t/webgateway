@@ -1,4 +1,4 @@
-use std::{net::{IpAddr, SocketAddr}, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::anyhow;
 use protocols::tls::ProtocolTLS;
@@ -18,11 +18,19 @@ impl WebSiteRunner {
         // only get first
         // TODO
         println!("Found {:?} backends", inner.backends);
-        let backend = inner.backends.first().ok_or(anyhow!("No found any backends"))?;
+        let backend = inner
+            .backends
+            .first()
+            .ok_or(anyhow!("No found any backends"))?;
         let hostname = backend.url.domain().ok_or(anyhow!("No found any host"))?;
         println!("Found host: {hostname}");
         // dns resolver it
-        let addrs = lookup_host(format!("{hostname}:{}", backend.url.port_or_known_default().unwrap_or(80))).await?.collect::<Vec<SocketAddr>>();
+        let addrs = lookup_host(format!(
+            "{hostname}:{}",
+            backend.url.port_or_known_default().unwrap_or(80)
+        ))
+        .await?
+        .collect::<Vec<SocketAddr>>();
         Ok(Self {
             inner,
             pool: BackendConnectionPool::new(BackendConnectionPoolConfig::new_from_targets(addrs)),
