@@ -5,6 +5,7 @@ pub mod foundation;
 pub mod proxy;
 pub mod state;
 pub mod sync;
+pub mod config;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

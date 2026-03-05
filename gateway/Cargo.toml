@@ -6,13 +6,15 @@ edition = "2024"
 [dependencies]
 hyper = { version = "1.8.1", features = ["full", "client"] }
 hyper-util = { version = "0.1.20", features = ["full"] }
-protocols = { path = "../protocols" }
+protocols = { path = "../crates/protocols" }
 tokio = { version = "1.49.0", features = ["full"] }
-shared = { path = "../shared" }
+shared = { path = "../crates/shared" }
 anyhow = "1.0.101"
 tracing = "0.1.44"
-utils = { path = "../utils" }
+utils = { path = "../crates/utils" }
 rustls = "0.23.36"
 tokio-rustls = "0.26.4"
 tokio_schedule = "0.3.2"
 chrono = "0.4.43"
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "1.0.4"

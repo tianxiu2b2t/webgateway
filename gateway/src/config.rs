@@ -1,20 +1,16 @@
 use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
-use shared::default::{default_dashboard_api_port, default_database_max_connections};
+use shared::default::{default_database_max_connections};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MainConfig {
-    #[serde(default = "default_dashboard_api_port")]
-    pub port: u16,
     pub database: String,
     #[serde(
         default = "default_database_max_connections",
         rename = "database_max_connections"
     )]
     pub max_connections: u32,
-    #[serde(rename = "token_expires")]
-    pub token_exp: u64,
 }
 
 pub static CONFIG: OnceLock<MainConfig> = OnceLock::new();

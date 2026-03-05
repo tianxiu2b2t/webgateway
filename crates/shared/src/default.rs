@@ -14,7 +14,7 @@ pub fn default_dashboard_api_port() -> u16 {
     3000
 }
 
-pub fn default_dashboard_database_max_connections() -> u32 {
+pub fn default_database_max_connections() -> u32 {
     10
 }
 
