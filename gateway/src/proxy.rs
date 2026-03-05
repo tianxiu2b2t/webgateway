@@ -10,7 +10,6 @@ use hyper_util::{
     server::conn::auto::Builder,
 };
 use shared::{
-    default::sign_default_certificates,
     listener::CustomDualStackTcpListener,
     streams::{BufferStream, WrapperBufferStream},
 };
@@ -18,7 +17,7 @@ use tokio::{net::TcpStream, sync::RwLock, task::JoinHandle};
 use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
-use crate::proxy::backends::{BackendConnectionPool, BackendConnectionPoolConfig};
+use crate::{proxy::backends::{BackendConnectionPool, BackendConnectionPoolConfig}, sync::SERVER_CONFIG};
 pub mod backends;
 pub mod protocols;
 
@@ -29,8 +28,8 @@ static HTTP_BUILDER: LazyLock<Builder<TokioExecutor>> = LazyLock::new(|| {
 static LISTENERS: LazyLock<RwLock<HashMap<u16, JoinHandle<()>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
-static DEFAULT_TLS_CONFIG: LazyLock<Arc<TlsAcceptor>> =
-    LazyLock::new(|| Arc::new(TlsAcceptor::from(sign_default_certificates().unwrap())));
+static TLS_ACCEPTOR: LazyLock<Arc<TlsAcceptor>> =
+    LazyLock::new(|| Arc::new(TlsAcceptor::from(SERVER_CONFIG.clone())));
 
 static TEMP_CONNECTION_POOL: LazyLock<Arc<BackendConnectionPool>> = LazyLock::new(|| {
     BackendConnectionPool::new(BackendConnectionPoolConfig::new(SocketAddr::V4(
@@ -64,6 +63,7 @@ async fn accept(listener: CustomDualStackTcpListener) {
 pub async fn listen(port: u16) -> anyhow::Result<()> {
     let thread = tokio::spawn(async move {
         let listener = CustomDualStackTcpListener::new_by_port(port).await.unwrap();
+        event!(Level::INFO, "Listening on {:?}", listener.local_addrs().unwrap());
         accept(listener).await;
     });
 
@@ -74,12 +74,12 @@ pub async fn listen(port: u16) -> anyhow::Result<()> {
 async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Result<()> {
     event!(Level::INFO, "Connection from {}", addr);
     let stream = BufferStream::new(WrapperBufferStream::Raw(stream));
-    let (stream, proxy_protocol) = protocols::get_proxy_protocol(stream).await?;
+    let (stream, _) = protocols::get_proxy_protocol(stream).await?;
     // event!(Level::INFO, "Proxy protocol: {:?}", proxy_protocol);
     let (stream, tls) = protocols::get_tls_sni(stream).await?;
     let final_stream = match tls {
-        Some(tls) => {
-            let s = DEFAULT_TLS_CONFIG.accept(stream).await?;
+        Some(_) => {
+            let s = TLS_ACCEPTOR.accept(stream).await?;
             BufferStream::new(WrapperBufferStream::TlsServerBufferStream(Box::new(s)))
         }
         None => stream,

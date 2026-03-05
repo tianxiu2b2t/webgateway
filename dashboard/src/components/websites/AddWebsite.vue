@@ -17,14 +17,17 @@
                 <InputEdit
                     label="网站证书"
                     placeholder="留空自动选择证书"
-                    v-model:value="config.cert.value"
+                    :muitloptions="true"
+                    v-model:tags="config.cert.value"
                 />
                 <div>
                     <AddWebsiteBackend />
                 </div>
             </div>
         </template>
-        <template #footer><DialogClose @cancel="cancel" /></template>
+        <template #footer
+            ><DialogClose @cancel="cancel" @confirm="submit"
+        /></template>
     </Dialog>
 </template>
 
@@ -36,12 +39,15 @@ import InputEdit from '../InputEdit.vue';
 import AddWebsiteBackend from './AddWebsiteBackend.vue';
 import { addDialog } from '../../plugins/dialog';
 import DraftContent from '../../plugins/dialog/templates/DraftContent.vue';
+import { createWebsite } from '../../apis/websites';
+import type { WebsiteCreateRequest } from '../../types';
+import addPresentation from '../../plugins/presentation';
 
 const emit = defineEmits(['close']);
 const state = reactive({
     ports: ['80', '443'],
     domains: ['*'],
-    cert: '',
+    cert: [],
     backends: [],
 });
 const config = toRefs(state);
@@ -58,9 +64,6 @@ watch(
 function cancel() {
     if (modified.value) {
         addDialog(DraftContent, {
-            cancel: () => {
-                console.log('cancel');
-            },
             confirm: () => {
                 emit('close');
             },
@@ -68,6 +71,21 @@ function cancel() {
         return;
     }
     emit('close');
+}
+async function submit() {
+    const data: WebsiteCreateRequest = {
+        ports: state.ports.map((v) => parseInt(v)),
+        hosts: state.domains,
+        certificates: state.cert,
+        backends: state.backends,
+    };
+    const resp = await createWebsite(data);
+    if (resp.status == 200) {
+        addPresentation('添加成功', 'success');
+        emit('close');
+    } else {
+        addPresentation(resp.message as string, 'alert');
+    }
 }
 </script>
 

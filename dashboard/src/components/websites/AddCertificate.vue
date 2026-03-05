@@ -58,6 +58,7 @@ import type {
     CreateCertificateType,
 } from '../../types/certificate';
 import { create } from '../../apis/certificate';
+import addPresentation from '../../plugins/presentation';
 
 const emit = defineEmits(['close']);
 const name = ref('');
@@ -69,10 +70,16 @@ const privkey = ref('');
 
 const modified = ref(false);
 watch(
-    () => [name.value, active.value, fullchain.value, privkey.value],
+    () => [
+        name.value,
+        active.value,
+        fullchain.value,
+        privkey.value,
+        domains.value,
+        email.value,
+    ],
     () => {
         modified.value = true;
-        console.log(fullchain.value, privkey.value);
     },
     { deep: true },
 );
@@ -80,9 +87,6 @@ watch(
 function cancel() {
     if (modified.value) {
         addDialog(DraftContent, {
-            cancel: () => {
-                console.log('cancel');
-            },
             confirm: () => {
                 emit('close');
             },
@@ -107,8 +111,11 @@ async function submit() {
         type == 'auto' ? auto_data : manual_data,
         name.value ? name.value : undefined,
     );
-    console.log(resp);
-    emit('close');
+    if (resp.status == 200) {
+        emit('close');
+        return;
+    }
+    addPresentation(resp.message as string, 'alert');
 }
 </script>
 

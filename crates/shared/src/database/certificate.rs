@@ -189,6 +189,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 
 use crate::{
     database::Database,
@@ -230,6 +231,7 @@ impl DatabaseCertificateInitializer for Database {
 #[async_trait]
 pub trait DatabaseCertificateRepository {
     async fn get_certificates(&self) -> Result<Vec<DatabaseCertificate>>;
+    async fn get_certificates_before_updated_at(&self, before: &chrono::DateTime<chrono::Utc>) -> Result<Vec<DatabaseCertificate>>;
     async fn get_will_sign_certificates(&self) -> Result<Vec<NeedSignCertificate>>;
 
     async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()>;
@@ -244,7 +246,7 @@ pub trait DatabaseCertificateRepository {
 impl DatabaseCertificateRepository for Database {
     async fn get_certificates(&self) -> Result<Vec<DatabaseCertificate>> {
         let certs = sqlx::query_as::<_, DatabaseCertificate>(
-            "SELECT id, hostnames, fullchain, private_key, dns_provider_id, email, expires_at, created_at, updated_at FROM certificates",
+            "SELECT id, name, hostnames, fullchain, private_key, dns_provider_id, email, expires_at, created_at, updated_at FROM certificates",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -252,9 +254,18 @@ impl DatabaseCertificateRepository for Database {
         Ok(certs)
     }
 
+    async fn get_certificates_before_updated_at(&self, before: &DateTime<Utc>) -> Result<Vec<DatabaseCertificate>> {
+        let certs = sqlx::query_as::<_, DatabaseCertificate>
+            ("SELECT id, name, hostnames, fullchain, private_key, dns_provider_id, email, expires_at, created_at, updated_at FROM certificates WHERE updated_at > $1")
+            .bind(before)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(certs)
+    }
+
     async fn get_will_sign_certificates(&self) -> Result<Vec<NeedSignCertificate>> {
         let certs = sqlx::query_as::<_, NeedSignCertificate>(
-            "SELECT id, hostnames, dns_provider_id FROM certificates WHERE (expires_at IS NULL OR expires_at < (NOW() - '7 days'::INTERVAL)) AND dns_provider_id IS NOT NULL AND email IS NOT NULL",
+            "SELECT id, name, hostnames, dns_provider_id FROM certificates WHERE (expires_at IS NULL OR expires_at < (NOW() - '7 days'::INTERVAL)) AND dns_provider_id IS NOT NULL AND email IS NOT NULL",
         )
         .fetch_all(&self.pool)
         .await?;

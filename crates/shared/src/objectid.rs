@@ -187,16 +187,8 @@ impl<'q> Encode<'q, Postgres> for ObjectId {
         &self,
         buf: &mut PgArgumentBuffer,
     ) -> Result<IsNull, Box<dyn StdError + Send + Sync + 'static>> {
-        let bytes = self.to_hex();
-        if bytes.len() != Self::get_type_size() {
-            return Err(format!(
-                "Invalid size for usize, data_len: {}, expected: {}",
-                bytes.len(),
-                Self::get_type_size()
-            )
-            .into());
-        }
-        <[u8; 24] as Encode<Postgres>>::encode_by_ref(bytes.as_bytes().try_into().unwrap(), buf)
+        let hex = self.to_hex(); // 返回 String
+        <&str as Encode<Postgres>>::encode(hex.as_str(), buf)
     }
 
     fn size_hint(&self) -> usize {
@@ -207,27 +199,19 @@ impl<'q> Encode<'q, Postgres> for ObjectId {
 impl<'r> Decode<'r, Postgres> for ObjectId {
     fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
         // 从大端字节序解析为usize
-        let bytes = <[u8; 24] as Decode<Postgres>>::decode(value)?;
-        if bytes.len() != Self::get_type_size() {
-            return Err(format!(
-                "Invalid size for usize, data_len: {}, expected: {}",
-                bytes.len(),
-                Self::get_type_size()
-            )
-            .into());
-        }
-        Ok(ObjectId::from_hex(&String::from_utf8(bytes.to_vec())?)?)
+        let s = <&str as Decode<Postgres>>::decode(value)?;
+        ObjectId::from_hex(s).map_err(Into::into)
     }
 }
 
 impl Type<Postgres> for ObjectId {
     fn type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("TEXT")
+        <String as Type<Postgres>>::type_info()
     }
 }
 
 impl PgHasArrayType for ObjectId {
     fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("TEXT[]")
+        <Vec<String> as Type<Postgres>>::type_info()
     }
 }

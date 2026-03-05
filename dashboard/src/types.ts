@@ -39,7 +39,7 @@ export interface WebsiteRequestIp {
 }
 
 export interface WebsiteCreateRequest {
-    name: string;
+    name?: string;
     hosts: string[];
     ports: number[];
     certificates: string[];

@@ -56,9 +56,6 @@ watch(
 function cancel() {
     if (modified.value) {
         addDialog(DraftContent, {
-            cancel: () => {
-                console.log('cancel');
-            },
             confirm: () => {
                 emit('close');
             },
@@ -83,6 +80,8 @@ async function submit() {
     if (resp.status == 200) {
         addPresentation('添加成功', 'success');
         emit('close');
+    } else {
+        addPresentation(resp.message as string, 'alert');
     }
 }
 </script>

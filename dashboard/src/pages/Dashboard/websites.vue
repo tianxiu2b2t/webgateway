@@ -2,7 +2,7 @@
     <Panel
         ><div class="websites-overview">
             <div class="overview-side">
-                共 {{ 0 }} 个网站
+                共 {{ websites.length }} 个网站
                 <InputEdit
                     class="search-input"
                     label="网站"

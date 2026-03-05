@@ -1,8 +1,7 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use rcgen::{CertifiedKey, generate_simple_self_signed};
 use rustls::{
-    ServerConfig,
     pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer},
 };
 
@@ -18,7 +17,7 @@ pub fn default_database_max_connections() -> u32 {
     10
 }
 
-pub fn sign_default_certificates() -> anyhow::Result<Arc<ServerConfig>> {
+pub fn sign_default_certificates() -> anyhow::Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>)> {
     let CertifiedKey { cert, signing_key } =
         generate_simple_self_signed(vec!["localhost".to_string()]).unwrap();
 
@@ -30,9 +29,5 @@ pub fn sign_default_certificates() -> anyhow::Result<Arc<ServerConfig>> {
     let key_der_bytes = signing_key.serialize_der();
     let private_key = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key_der_bytes));
 
-    let config = ServerConfig::builder()
-        .with_no_client_auth()
-        .with_single_cert(cert_chain, private_key)?;
-
-    Ok(Arc::new(config))
+    Ok((cert_chain, private_key))
 }

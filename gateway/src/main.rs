@@ -1,5 +1,7 @@
-use shared::logger::{self, LoggerConfig};
+use shared::{database, logger::{self, LoggerConfig}};
 use tokio::signal::ctrl_c;
+
+use crate::config::get_config;
 
 pub mod foundation;
 pub mod proxy;
@@ -10,6 +12,8 @@ pub mod config;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     logger::init(LoggerConfig::default());
+    config::init_config()?;
+    database::init_database(&get_config().database, get_config().max_connections).await?;
     // ...
     // need wait for sync and then start proxy, so it need wait for sync config state;
     sync::main().await?;

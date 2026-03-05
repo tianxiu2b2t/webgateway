@@ -185,8 +185,6 @@ const hasNext = computed(() => {
 watch(
     () => currentPage.value,
     (newVal) => {
-        console.log('newVal', newVal);
-        console.log(hasPrev, hasNext);
         emit('currentPage', newVal);
     },
 );

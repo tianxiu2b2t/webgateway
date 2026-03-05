@@ -14,7 +14,7 @@ use crate::{auth::middle_refresh_token, response::APIResponse};
 
 pub async fn get_all(
 ) -> APIResponse<Vec<DatabaseWebsite>> {
-    APIResponse::ok(get_database().get_websites().await.ok().unwrap_or(vec![]))
+    APIResponse::result(get_database().get_websites().await)
 }
 
 pub async fn create(

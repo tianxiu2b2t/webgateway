@@ -14,7 +14,6 @@ const props = defineProps({
 watch(
     () => [key.value, secret.value],
     ([key, secret]) => {
-        console.log(key, secret);
         emit('update:value', { secret_id: key, secret_key: secret });
     },
 );

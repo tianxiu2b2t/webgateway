@@ -15,6 +15,7 @@ use crate::{objectid::ObjectId, secret::RemovedSensitiveInfo};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseCertificate {
     pub id: ObjectId,
+    pub name: Option<String>,
     pub hostnames: Vec<String>,
     pub expires_at: DateTime<Utc>,
     pub fullchain: String,
@@ -27,8 +28,9 @@ pub struct DatabaseCertificate {
 
 impl<'a> DatabaseCertificate {
     pub fn get_fullchain(&self) -> anyhow::Result<Vec<CertificateDer<'a>>> {
-        Ok(parse_many(&self.fullchain)?.iter().filter_map(|v| {
-            CertificateDer::from_pem_slice(v.contents()).ok()
+        Ok(parse_many(&self.fullchain)?.iter().map(|v| {
+            let content = v.contents();
+            CertificateDer::from_slice(content).into_owned()
         }).collect::<Vec<CertificateDer>>())
     }
     pub fn get_private_key(&self) -> anyhow::Result<PrivateKeyDer<'a>> {
@@ -53,6 +55,7 @@ impl RemovedSensitiveInfo for DatabaseCertificate {
             email: self.email.as_ref().map(replace_sensitive_data),
             created_at: self.created_at,
             updated_at: self.updated_at,
+            name: self.name.clone()
         }
     }
 }
@@ -69,6 +72,7 @@ impl<'r> FromRow<'r, PgRow> for DatabaseCertificate {
             email: row.try_get("email")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
+            name: row.try_get("name")?,
         })
     }
 }

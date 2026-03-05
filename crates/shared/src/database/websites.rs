@@ -1,4 +1,4 @@
-use sqlx::{FromRow, types::Json};
+use sqlx::types::Json;
 use sqlx_pg_ext_uint::c_u16::U16;
 
 use crate::{
@@ -40,27 +40,34 @@ impl DatabaseWebsiteInitializer for Database {
 #[async_trait::async_trait]
 pub trait DatabaseWebsiteQuery {
     async fn get_websites(&self) -> anyhow::Result<Vec<DatabaseWebsite>>;
+    async fn get_websites_before_updated_at(&self, updated_at: &chrono::DateTime<chrono::Utc>) -> anyhow::Result<Vec<DatabaseWebsite>>;
     async fn get_website(&self, id: &ObjectId) -> anyhow::Result<DatabaseWebsite>;
 }
 
 #[async_trait::async_trait]
 impl DatabaseWebsiteQuery for Database {
     async fn get_websites(&self) -> anyhow::Result<Vec<DatabaseWebsite>> {
-        let rows = sqlx::query("SELECT * FROM websites;")
+        let rows = sqlx::query_as::<_, DatabaseWebsite>("SELECT * FROM websites;")
             .fetch_all(&self.pool)
             .await?;
-        Ok(rows
-            .iter()
-            .flat_map(|v| DatabaseWebsite::from_row(v).ok())
-            .collect::<Vec<DatabaseWebsite>>())
+        println!("Got {rows:?} websites");
+        Ok(rows)
+    }
+
+    async fn get_websites_before_updated_at(&self, updated_at: &chrono::DateTime<chrono::Utc>) -> anyhow::Result<Vec<DatabaseWebsite>> {
+        let rows = sqlx::query_as::<_, DatabaseWebsite>("SELECT * FROM websites WHERE updated_at > $1;")
+            .bind(updated_at)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows)
     }
 
     async fn get_website(&self, id: &ObjectId) -> anyhow::Result<DatabaseWebsite> {
-        let row = sqlx::query("SELECT * FROM websites WHERE id = $1;")
+        let row = sqlx::query_as::<_, _>("SELECT * FROM websites WHERE id = $1;")
             .bind(id.to_string())
             .fetch_one(&self.pool)
             .await?;
-        Ok(DatabaseWebsite::from_row(&row)?)
+        Ok(row)
     }
 }
 
@@ -79,7 +86,7 @@ impl DatabaseWebsiteSet for Database {
         website: &CreateDatabaseWebsite,
     ) -> anyhow::Result<DatabaseWebsite> {
         let id = ObjectId::new();
-        let row = sqlx::query("INSERT INTO websites (id, name, hosts, ports, certificates, backends, config) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;")
+        let row = sqlx::query_as::<_, _>("INSERT INTO websites (id, name, hosts, ports, certificates, backends, config) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;")
             .bind(id)
             .bind(website.name.as_ref())
             .bind(website.hosts.to_vec())
@@ -89,6 +96,6 @@ impl DatabaseWebsiteSet for Database {
             .bind(Json(website.config.as_ref().unwrap_or(&DatabaseWebsiteConfig::default())))
             .fetch_one(&self.pool)
             .await?;
-        Ok(DatabaseWebsite::from_row(&row)?)
+        Ok(row)
     }
 }
