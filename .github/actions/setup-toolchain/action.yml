@@ -1,0 +1,63 @@
+name: "Setup Rust, Node, Yarn, and Vite"
+description: "Installs Rust toolchain, Node.js, enables Yarn via Corepack, and optionally installs dependencies (including Vite)"
+inputs:
+  rust-version:
+    description: "Rust toolchain version (e.g., stable, nightly, 1.70.0)"
+    required: false
+    default: "stable"
+  node-version:
+    description: "Node.js version (e.g., 18, 20, lts/*)"
+    required: false
+    default: "20"
+  yarn-version:
+    description: 'Yarn version (e.g., stable, classic, 3.6.0) – applied via "yarn set version"'
+    required: false
+    default: ""
+  install-dependencies:
+    description: 'Whether to run "yarn install" to install project dependencies (including Vite)'
+    required: false
+    default: "true"
+  working-directory:
+    description: "Directory containing package.json and yarn.lock (relative to repository root)"
+    required: false
+    default: "."
+
+runs:
+  using: "composite"
+  steps:
+    # Rust 工具链
+    - name: Setup Rust toolchain
+      uses: dtolnay/rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.rust-version }}
+
+    # Dockerx
+    - name: Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # # Node.js 和 Yarn 缓存
+    # - name: Setup Node.js
+    #   uses: actions/setup-node@v4
+    #   with:
+    #     node-version: ${{ inputs.node-version }}
+    #     cache: "yarn"
+    #     cache-dependency-path: ${{ inputs.working-directory }}/yarn.lock
+
+    # # 启用 Corepack（使 yarn 命令可用）
+    # - name: Enable Corepack
+    #   shell: bash
+    #   run: corepack enable
+
+    # # 如果指定了 Yarn 版本，则切换
+    # - name: Set Yarn version (if specified)
+    #   if: ${{ inputs.yarn-version != '' }}
+    #   shell: bash
+    #   working-directory: ${{ inputs.working-directory }}
+    #   run: yarn set version ${{ inputs.yarn-version }}
+
+    # # 安装项目依赖（包括 Vite）
+    # - name: Install dependencies (yarn install)
+    #   if: ${{ inputs.install-dependencies == 'true' }}
+    #   shell: bash
+    #   working-directory: ${{ inputs.working-directory }}
+    #   run: yarn install --frozen-lockfile
