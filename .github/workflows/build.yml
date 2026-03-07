@@ -19,6 +19,8 @@ jobs:
         with:
           rust-version: "stable"
           install-dependencies: "true"
+          github_actor: "tianxiu2b2t"
+          github_token: ${{ secrets.GH_TOKEN }}
 
       - name: Build release
         uses: ./.github/actions/build
