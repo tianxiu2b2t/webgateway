@@ -3,10 +3,10 @@ use std::os::unix::net::UnixStream;
 
 use anyhow::Result;
 use clap::Parser;
-use shared::mnt_protocols::{
+use simple_shared::mnt_protocols::{
     ClientRequest, ClientRequestContent, ServerResponse, SyncZigZagVarint, MNT_PATH,
 };
-use shared::objectid::ObjectId;
+use simple_shared::objectid::ObjectId;
 
 /// 简单的命令行客户端，用于与 WebGateway 的管理 Unix 套接字通信
 #[derive(Parser, Debug)]
@@ -69,7 +69,7 @@ fn main() -> Result<()> {
     let response_content = response.content.unwrap();
 
     match response_content {
-        shared::mnt_protocols::ServerResponseContent::AdminTOTP { user, totp } => {
+        simple_shared::mnt_protocols::ServerResponseContent::AdminTOTP { user, totp } => {
             println!("User: {user}");
             println!("TOTP: {totp}");
         }

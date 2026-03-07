@@ -10,8 +10,8 @@ serde = { version = "1.0.228", features = ["derive"] }
 sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio"] }
 tokio = { version = "1.49.0", features = ["full"] }
 toml = "1.0.1"
-utils = { path = "../crates/utils", version = "0.1.0" }
-shared = { path = "../crates/shared", version = "0.1.0" }
+utils = { path = "../../crates/utils", version = "0.1.0" }
+shared = { path = "../../crates/shared", version = "0.1.0" }
 tracing = "0.1.44"
 serde_json = "1.0.149"
 units-formatter = "0.1.1"
@@ -31,4 +31,4 @@ acmex = { version = "0.8.0", features = ["dns-tencent", "zerossl-ca"] }
 
 [[bin]]
 name = "dashboard"
-path = "src-rs/main.rs"
+path = "src/main.rs"

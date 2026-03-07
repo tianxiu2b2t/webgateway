@@ -2,8 +2,9 @@ pub mod database;
 pub mod default;
 pub mod listener;
 pub mod logger;
-pub mod mnt_protocols;
 pub mod models;
-pub mod objectid;
 pub mod secret;
 pub mod streams;
+
+pub use simple_shared::objectid;
+pub use simple_shared::mnt_protocols;

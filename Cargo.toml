@@ -4,7 +4,8 @@ members = [
     "crates/dnsprovider",
     "crates/utils",
     "crates/shared",
-    "dashboard",
+    "crates/simple_shared",
+    "dashboard/backend",
     "mnt"
 ]
 resolver = "3"
