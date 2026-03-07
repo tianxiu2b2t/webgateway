@@ -14,6 +14,7 @@ runs:
 
     # build it
     - name: Build
+      shell: bash
       run: |
         export cargo_mode="--$(if ${{ github.event.inputs.release }},release,debug)"
         cargo build $cargo_mode -p dashboard
@@ -21,6 +22,7 @@ runs:
         cargo build $cargo_mode -p webgateway-mnt
 
     - name: Copy only build artifacts
+      shell: bash
       run: |
         mkdir /builds
         cp -r "target/$cargo_mode/dashboard" /builds/dashboard
