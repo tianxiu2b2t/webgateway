@@ -18,8 +18,10 @@ runs:
       run: |
         if [ "${{ inputs.release }}" = "true" ]; then
           export cargo_mode="--release"
+          export cargo_build_dir="release"
         else
           export cargo_mode=""
+          export cargo_build_dir="debug"
         fi
         cargo build $cargo_mode -p dashboard
         cargo build $cargo_mode -p gateway
