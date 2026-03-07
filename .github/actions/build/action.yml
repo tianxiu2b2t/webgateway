@@ -1,0 +1,35 @@
+name: "Build Rust Application"
+description: "Build Rust Application for release or debug"
+inputs:
+  release:
+    description: "Build in release mode (default: false)"
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # build it
+    - name: Build
+      run: |
+        export cargo_mode="--$(if ${{ github.event.inputs.release }},release,debug)"
+        cargo build $cargo_mode -p dashboard
+        cargo build $cargo_mode -p gateway
+        cargo build $cargo_mode -p webgateway-mnt
+
+    - name: Copy only build artifacts
+      run: |
+        mkdir /builds
+        cp -r "target/$cargo_mode/dashboard" /builds/dashboard
+        cp -r "target/$cargo_mode/gateway" /builds/gateway
+        cp -r "target/$cargo_mode/webgateway-mnt" /builds/webgateway-mnt
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: build
+        path: /builds/*
+        # if: ${{ github.event.inputs.release }}

@@ -13,17 +13,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup toolchains
-        uses: ./.github/actions/setup-toolchain # 根据实际路径调整
+        uses: ./.github/actions/setup-toolchain
         with:
           rust-version: "stable"
-          install-dependencies: "true" # 默认 true
+          install-dependencies: "true"
 
-      # 后续步骤可以直接使用安装好的工具
-      - name: Build gateway with Rust
-        run: cargo build --release -p gateway
-
-      - name: Build dashboard with Rust
-        run: cargo build --release -p dashboard
-
-      - name: Build dashboard mnt with Rust
-        run: cargo build --release -p webgateway-mnt
+      - name: Build release
+        uses: ./.github/actions/build
+        with:
+          release: true
