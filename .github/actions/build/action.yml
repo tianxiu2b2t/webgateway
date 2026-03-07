@@ -13,7 +13,7 @@ runs:
       uses: actions/checkout@v2
 
     # build it
-    - name: Build
+    - name: Build and copy build artifacts
       shell: bash
       run: |
         if [ "${{ inputs.release }}" = "true" ]; then
@@ -27,10 +27,8 @@ runs:
         cargo build $cargo_mode -p gateway
         cargo build $cargo_mode -p webgateway-mnt
 
-    - name: Copy only build artifacts
-      shell: bash
-      run: |
         mkdir builds
+
         cp -r "target/$cargo_build_dir/dashboard" builds/dashboard
         cp -r "target/$cargo_build_dir/gateway" builds/gateway
         cp -r "target/$cargo_build_dir/webgateway-mnt" builds/webgateway-mnt
