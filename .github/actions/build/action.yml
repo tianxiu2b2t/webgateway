@@ -30,7 +30,7 @@ runs:
         cp -r "target/$cargo_mode/webgateway-mnt" /builds/webgateway-mnt
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build
         path: /builds/*
