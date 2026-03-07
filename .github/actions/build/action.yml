@@ -16,7 +16,11 @@ runs:
     - name: Build
       shell: bash
       run: |
-        export cargo_mode="--$(if ${{ github.event.inputs.release }},release,debug)"
+        if [ "${{ inputs.release }}" = "true" ]; then
+          export cargo_mode="--release"
+        else
+          export cargo_mode=""
+        fi
         cargo build $cargo_mode -p dashboard
         cargo build $cargo_mode -p gateway
         cargo build $cargo_mode -p webgateway-mnt
