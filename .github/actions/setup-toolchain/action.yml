@@ -5,22 +5,16 @@ inputs:
     description: "Rust toolchain version (e.g., stable, nightly, 1.70.0)"
     required: false
     default: "stable"
-  node-version:
-    description: "Node.js version (e.g., 18, 20, lts/*)"
+
+  github_actor:
+    description: "GitHub actor"
     required: false
-    default: "20"
-  yarn-version:
-    description: 'Yarn version (e.g., stable, classic, 3.6.0) – applied via "yarn set version"'
+    default: ${{ github.actor }}
+
+  github_token:
+    description: "GitHub token"
     required: false
-    default: ""
-  install-dependencies:
-    description: 'Whether to run "yarn install" to install project dependencies (including Vite)'
-    required: false
-    default: "true"
-  working-directory:
-    description: "Directory containing package.json and yarn.lock (relative to repository root)"
-    required: false
-    default: "."
+    default: ${{ secrets.GITHUB_TOKEN }}
 
 runs:
   using: "composite"
@@ -34,6 +28,13 @@ runs:
     # Dockerx
     - name: Setup Docker Buildx
       uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+      registry: ghcr.io
+      username: ${{ inputs.github.actor }}
+      password: ${{ inputs.github_token }}
 
     # # Node.js 和 Yarn 缓存
     # - name: Setup Node.js

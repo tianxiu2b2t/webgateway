@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -22,3 +24,13 @@ jobs:
         uses: ./.github/actions/build
         with:
           release: true
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+        context: ./gateway
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}/webgateway-gateway:latest
+          ghcr.io/${{ github.repository }}/webgateway-gateway:${{ github.sha }}
+          ghcr.io/${{ github.repository }}/webgateway-gateway:${{ github.ref }}
