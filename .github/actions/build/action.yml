@@ -28,14 +28,14 @@ runs:
     - name: Copy only build artifacts
       shell: bash
       run: |
-        mkdir /builds
-        cp -r "target/$cargo_mode/dashboard" /builds/dashboard
-        cp -r "target/$cargo_mode/gateway" /builds/gateway
-        cp -r "target/$cargo_mode/webgateway-mnt" /builds/webgateway-mnt
+        mkdir builds
+        cp -r "target/$cargo_mode/dashboard" builds/dashboard
+        cp -r "target/$cargo_mode/gateway" builds/gateway
+        cp -r "target/$cargo_mode/webgateway-mnt" builds/webgateway-mnt
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: build
-        path: /builds/*
+        path: builds/*
         # if: ${{ github.event.inputs.release }}
