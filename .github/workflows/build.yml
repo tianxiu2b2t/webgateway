@@ -39,8 +39,10 @@ jobs:
         shell: bash
         run: |
           cp ./builds/gateway ./gateway/gateway
+          cp ./builds/dashboard ./dashboard/backend/dashboard
+          cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
 
-      - name: Build and push Docker image
+      - name: Build gateway and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./gateway
@@ -49,5 +51,29 @@ jobs:
             ghcr.io/${{ github.repository }}/gateway:latest
             ghcr.io/${{ github.repository }}/gateway:${{ github.sha }}
             ghcr.io/${{ github.repository }}/gateway:${{ env.RELEASE_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build backend dashboard and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./dashboard/backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/dashboard-backend:latest
+            ghcr.io/${{ github.repository }}/dashboard-backend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/dashboard-backend:${{ env.RELEASE_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend dashboard and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./dashboard/frontend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/dashboard-frontend:latest
+            ghcr.io/${{ github.repository }}/dashboard-frontend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/dashboard-frontend:${{ env.RELEASE_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

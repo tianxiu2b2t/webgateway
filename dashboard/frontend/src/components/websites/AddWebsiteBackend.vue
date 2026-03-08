@@ -3,23 +3,27 @@
         <InputEdit
             label="回源地址"
             placeholder="http://127.0.0.1:8080"
-            :v-model:value="result.url"
+            v-model:value="url"
         />
         <InputEdit
             label="权衡"
             type="number"
             style="width: auto"
-            value="0"
-            :v-model:value="result.balance"
+            :value="0"
+            :v-model:value="balance"
         />
     </div>
 </template>
 
 <script setup lang="ts">
 import InputEdit from '../InputEdit.vue';
-const result = defineModel('result', {
-    type: Object,
-    default: () => ({}),
+const url = defineModel('url', {
+    type: String,
+    default: '',
+});
+const balance = defineModel('balance', {
+    type: Number,
+    default: 0,
 });
 </script>
 

@@ -58,7 +58,7 @@ const menu: MenuItem[] = [
     {
         title: '网站管理',
         to: 'websites',
-        icon: 'menu-website',
+        icon: 'common-earth',
         subMenu: [
             {
                 title: '网站列表',

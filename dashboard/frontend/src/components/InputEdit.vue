@@ -114,8 +114,20 @@ const props = defineProps({
     },
 });
 const container = ref<HTMLDivElement>();
-const value = defineModel<string>('value', {
+const value = defineModel<string | number>('value', {
     default: () => '',
+    validator(value, props) {
+        if (props.type === 'number') {
+            return !isNaN(Number(value));
+        }
+        return true;
+    },
+    get(v) {
+        if (props.type === 'number') {
+            return Number(v);
+        }
+        return v;
+    },
 });
 const tags = defineModel<string[]>('tags', {
     default: () => [],

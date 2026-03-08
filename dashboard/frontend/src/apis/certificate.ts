@@ -1,6 +1,7 @@
 import { gotWithAuth } from '../constant';
 import type { APIResponse } from '../types';
 import type {
+    Certificate,
     CreateCertificateContent,
     CreateCertificateType,
 } from '../types/certificate';
@@ -31,14 +32,14 @@ export async function total() {
     return resp.data;
 }
 
-// export async function fetch(page: number, perPage: number) {
-//     const resp = (await (
-//         await gotWithAuth.get(`${prefix}/page`, {
-//             searchParams: {
-//                 page,
-//                 size: perPage,
-//             },
-//         })
-//     ).json()) as APIResponse<DatabaseDNSProvider[]>;
-//     return resp.data;
-// }
+export async function fetch(page: number, perPage: number) {
+    const resp = (await (
+        await gotWithAuth.get(`${prefix}/page`, {
+            searchParams: {
+                page,
+                size: perPage,
+            },
+        })
+    ).json()) as APIResponse<Certificate[]>;
+    return resp.data;
+}

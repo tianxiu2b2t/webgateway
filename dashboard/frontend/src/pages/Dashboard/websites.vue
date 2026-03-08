@@ -1,5 +1,5 @@
 <template>
-    <Panel
+    <Panel style="margin-bottom: 24px"
         ><div class="websites-overview">
             <div class="overview-side">
                 共 {{ websites.length }} 个网站
@@ -16,6 +16,14 @@
             </div>
         </div></Panel
     >
+    <div class="websites">
+        <Panel class="site" v-for="site in websites">
+            <div class="site-overview">
+                <SvgIcon name="common-earth"></SvgIcon>
+            </div>
+            <div class="site-content"></div>
+        </Panel>
+    </div>
 </template>
 
 <script lang="ts" setup>
@@ -27,6 +35,7 @@ import type { Website } from '../../types/websites';
 import { getWebsites } from '../../apis/websites';
 import { addDialog } from '../../plugins/dialog';
 import AddWebsite from '../../components/websites/AddWebsite.vue';
+import SvgIcon from '../../components/SvgIcon.vue';
 const websites = ref<Website[]>([]);
 
 onMounted(async () => {
@@ -79,5 +88,18 @@ function toggleAddWebsite() {
     .websites-overview > :last-child button {
         width: 100%;
     }
+}
+
+.websites {
+    display: flex;
+    flex-direction: row;
+    min-height: calc(100% - 93px);
+    margin-right: -10px;
+    overflow: hidden;
+    flex-wrap: wrap;
+}
+
+.site {
+    display: flex;
 }
 </style>

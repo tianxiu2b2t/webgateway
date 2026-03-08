@@ -30,3 +30,13 @@ pub fn sign_default_certificates()
 
     Ok((cert_chain, private_key))
 }
+
+pub fn reqwest_default_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent(concat!(
+    "WebGateway-",
+    env!("CARGO_PKG_NAME"),
+    "/",
+    env!("CARGO_PKG_VERSION"),
+)).build().unwrap()
+}

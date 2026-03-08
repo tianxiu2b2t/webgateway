@@ -20,8 +20,11 @@
                     :muitloptions="true"
                     v-model:tags="config.cert.value"
                 />
-                <div v-for="(_, idx) in backends">
-                    <AddWebsiteBackend v-model:result="backends[idx]" />
+                <div v-for="(backend, idx) in state.backends" :key="idx">
+                    <AddWebsiteBackend
+                        v-model:url="backend.url"
+                        v-model:balance="backend.balance"
+                    />
                 </div>
             </div>
         </template>
@@ -47,12 +50,6 @@ import type {
 import addPresentation from '../../plugins/presentation';
 
 const emit = defineEmits(['close']);
-const backends = ref<WebsiteBackendInput[]>([
-    {
-        url: '',
-        balance: 0,
-    },
-]);
 const state = reactive<{
     ports: string[];
     domains: string[];
@@ -73,7 +70,7 @@ const config = toRefs(state);
 
 const modified = ref(false);
 watch(
-    () => [state.ports, state.domains, state.cert, backends.value],
+    () => [state.ports, state.domains, state.cert, state.backends],
     () => {
         modified.value = true;
     },
@@ -96,8 +93,9 @@ async function submit() {
         ports: state.ports.map((v) => parseInt(v)),
         hosts: state.domains,
         certificates: state.cert,
-        backends: backends.value.map((v) => ({
-            ...v,
+        backends: state.backends.map((v) => ({
+            url: v.url,
+            balance: +v.balance,
             main: true,
         })),
     };

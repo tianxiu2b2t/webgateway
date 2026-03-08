@@ -1,5 +1,5 @@
 <template>
-    <Table :config="tableConfig"
+    <Table :config="tableConfig" :data="data"
         ><template #header
             ><div class="header">
                 <div>
@@ -17,11 +17,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import Table, { type TableConfig } from '../../../components/Table.vue';
 import { addDialog } from '../../../plugins/dialog';
 import AddCertificate from '../../../components/websites/AddCertificate.vue';
 import Button from '../../../components/Button.vue';
+import { total, fetch } from '../../../apis/certificate';
+import { formatDate } from '../../../utils';
 const tableConfig = ref<TableConfig>({
     total: 0,
     headers: [
@@ -51,6 +53,28 @@ const tableConfig = ref<TableConfig>({
         },
     ],
 });
+const data = ref<any[]>([]);
+const perPage = ref(10);
+const currentPage = ref(1);
+onMounted(async () => {
+    await refresh();
+});
+async function refresh() {
+    tableConfig.value.total = await total();
+    const res = await fetch(currentPage.value - 1, perPage.value);
+    console.log(res);
+    data.value = res.map((v) => {
+        return {
+            name: v.name,
+            // ','
+            type: v.dns_provider_id ? 'DNS' : 'Manual',
+            domain: v.hostnames.join(', '),
+            updated_at: formatDate(v.updated_at),
+            created_at: formatDate(v.created_at),
+            expired_at: formatDate(v.expires_at),
+        };
+    });
+}
 </script>
 
 <style lang="css" scoped>

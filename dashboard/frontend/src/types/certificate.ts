@@ -14,3 +14,16 @@ export type CreateCertificateContent =
     | CreateCertificateManual;
 
 export type CreateCertificateType = 'auto' | 'manual';
+
+export interface Certificate {
+    name?: string;
+    id: string;
+    created_at: string;
+    updated_at: string;
+    email?: string;
+    expires_at: string;
+    dns_provider_id?: string;
+    hostnames: string[];
+    fullchain?: string;
+    private_key?: string;
+}
