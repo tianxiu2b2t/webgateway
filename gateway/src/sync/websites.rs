@@ -8,6 +8,7 @@ use dashmap::DashMap;
 use regex::Regex;
 use shared::database::{get_database, websites::DatabaseWebsiteQuery};
 use tokio::sync::RwLock;
+use tracing::event;
 
 use crate::state::WebSiteRunner;
 static LAST_SYNC: LazyLock<RwLock<DateTime<Utc>>> =
@@ -27,6 +28,9 @@ pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
     for website in websites {
         let site = Arc::new(WebSiteRunner::new(website).await?);
         for domain in &site.inner().hosts {
+            if !WEBSITES.contains_key(domain) {
+                event!(tracing::Level::INFO, "Sync website: {:?} => {:?}", domain, site.inner().backends);
+            }
             WEBSITES.insert(domain.to_owned(), site.clone());
         }
         for port in &site.inner().ports {

@@ -152,7 +152,7 @@ fn parse_proxy_protocol_v1(buf: &[u8]) -> ProxyProtocolResult<Option<ProxyProtoc
 }
 
 fn parse_proxy_protocol_v2(buf: &[u8]) -> ProxyProtocolResult<ProxyProtocolV2> {
-    let (version, command) = (buf[0] >> 4, buf[0] & 0x0f);
+    let (_, command) = (buf[0] >> 4, buf[0] & 0x0f);
     let (af, proto) = (buf[1] >> 4, buf[1] & 0x0f);
     let addr_length = u16::from_be_bytes(buf[2..4].try_into().unwrap()) as usize;
     let addr_type = match af {

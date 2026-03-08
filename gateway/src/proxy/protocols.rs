@@ -23,7 +23,6 @@ pub async fn get_proxy_protocol(
     mut stream: BufferStream,
 ) -> anyhow::Result<(BufferStream, Option<()>)> {
     let buf = stream.pre_read_buf(PRROXY_PROTOCOL_READ_BUF_SIZE).await?;
-    println!("buf: {:?}", &buf);
     // TODO: implement
     Ok((stream.into_inner(), None))
 }
@@ -32,7 +31,6 @@ pub async fn get_tls_sni(
     mut stream: BufferStream,
 ) -> anyhow::Result<(BufferStream, Option<ProtocolTLS>)> {
     let mut data = stream.pre_read_buf(TLS_HANDSHAKE_START_LENGTH).await?;
-    println!("data: {:?}", &data);
     if !is_tls_handshake(&data) {
         return Ok((stream.into_inner(), None));
     }

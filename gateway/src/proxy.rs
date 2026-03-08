@@ -99,7 +99,11 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
             service_fn(move |req: Request<Incoming>| {
                 let state = state.clone();
                 async move {
-                    handle(req, state).await
+                    let resp = handle(req, state).await;
+                    if let Err(e) = &resp {
+                        eprintln!("Error handling request: {e}");
+                    }
+                    resp
                 }
             }),
         )
