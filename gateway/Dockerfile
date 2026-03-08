@@ -1,6 +1,7 @@
 FROM debian:13.2-slim
 
 # cp builds to the container
-COPY builds/gateway /opt/webgateway/
 WORKDIR /opt/webgateway
+ADD builds/gateway /opt/webgateway/gateway
+
 CMD ["/opt/webgateway/gateway"]
