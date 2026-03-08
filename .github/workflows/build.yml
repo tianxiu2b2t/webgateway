@@ -49,5 +49,5 @@ jobs:
             ghcr.io/${{ github.repository }}-gateway:latest
             ghcr.io/${{ github.repository }}-gateway:${{ github.sha }}
             ghcr.io/${{ github.repository }}-gateway:${{ env.RELEASE_VERSION }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
