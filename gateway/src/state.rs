@@ -22,7 +22,7 @@ impl WebSiteRunner {
             .backends
             .first()
             .ok_or(anyhow!("No found any backends"))?;
-        let hostname = backend.url.domain().ok_or(anyhow!("No found any host"))?;
+        let hostname = backend.url.host_str().ok_or(anyhow!("No found any host"))?;
         println!("Found host: {hostname}");
         // dns resolver it
         let addrs = lookup_host(format!(
