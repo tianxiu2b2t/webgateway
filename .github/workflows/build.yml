@@ -43,6 +43,6 @@ jobs:
           context: ./gateway
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/webgateway-gateway:latest
-            ghcr.io/${{ github.repository }}/webgateway-gateway:${{ github.sha }}
-            ghcr.io/${{ github.repository }}/webgateway-gateway:${{ env.RELEASE_VERSION }}
+            ghcr.io/${{ github.repository }}-gateway:latest
+            ghcr.io/${{ github.repository }}-gateway:${{ github.sha }}
+            ghcr.io/${{ github.repository }}-gateway:${{ env.RELEASE_VERSION }}
