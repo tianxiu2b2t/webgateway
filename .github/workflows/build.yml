@@ -32,12 +32,10 @@ jobs:
         with:
           release: true
 
-      - name: Test
+      - name: Prepare release
         shell: bash
         run: |
-          ls .
-          ls ..
-          ls ./gateway
+          cp ./builds/gateway ./gateway/gateway
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
