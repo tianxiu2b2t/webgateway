@@ -19,11 +19,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # Rust 工具链
     - name: Setup Rust toolchain
       uses: dtolnay/rust-toolchain@v1
       with:
         toolchain: ${{ inputs.rust-version }}
+    - name: Setup Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-all-crates: true
 
     # Dockerx
     - name: Setup Docker Buildx
@@ -35,30 +38,3 @@ runs:
         registry: ghcr.io
         username: ${{ inputs.github_actor }}
         password: ${{ inputs.github_token }}
-
-    # # Node.js 和 Yarn 缓存
-    # - name: Setup Node.js
-    #   uses: actions/setup-node@v4
-    #   with:
-    #     node-version: ${{ inputs.node-version }}
-    #     cache: "yarn"
-    #     cache-dependency-path: ${{ inputs.working-directory }}/yarn.lock
-
-    # # 启用 Corepack（使 yarn 命令可用）
-    # - name: Enable Corepack
-    #   shell: bash
-    #   run: corepack enable
-
-    # # 如果指定了 Yarn 版本，则切换
-    # - name: Set Yarn version (if specified)
-    #   if: ${{ inputs.yarn-version != '' }}
-    #   shell: bash
-    #   working-directory: ${{ inputs.working-directory }}
-    #   run: yarn set version ${{ inputs.yarn-version }}
-
-    # # 安装项目依赖（包括 Vite）
-    # - name: Install dependencies (yarn install)
-    #   if: ${{ inputs.install-dependencies == 'true' }}
-    #   shell: bash
-    #   working-directory: ${{ inputs.working-directory }}
-    #   run: yarn install --frozen-lockfile
