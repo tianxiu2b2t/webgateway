@@ -21,14 +21,10 @@ watch(
 </script>
 
 <template>
-    <InputEdit
-        label="密钥 Key"
-        placeholder="Secret Key"
-        @update:value="(v) => (key = v)"
-    />
+    <InputEdit label="密钥 Key" placeholder="Secret Key" v-model:value="key" />
     <InputEdit
         label="密钥 Secret"
         placeholder="Secret"
-        @update:value="(v) => (secret = v)"
+        v-model:value="secret"
     />
 </template>

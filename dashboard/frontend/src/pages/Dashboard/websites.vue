@@ -17,7 +17,7 @@
         </div></Panel
     >
     <div class="websites">
-        <Panel class="site" v-for="site in websites">
+        <Panel class="site" v-for="_ in websites">
             <div class="site-overview">
                 <SvgIcon name="common-earth"></SvgIcon>
             </div>

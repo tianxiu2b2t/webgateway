@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import { init } from './vited.config.ts';
+// import { init } from './vited.config.ts';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 import path from 'path';
 
