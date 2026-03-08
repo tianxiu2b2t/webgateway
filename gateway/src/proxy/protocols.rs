@@ -35,7 +35,12 @@ pub async fn get_tls_sni(
         return Ok((stream.into_inner(), None));
     }
     data.extend(stream.pre_read_buf(8192).await?);
+    let mut current_length = data.len();
+    let mut last_length = 0;
     loop {
+        if last_length == current_length {
+            break;
+        }
         match get_tls_sni_from_buf(&data) {
             Ok(sni) => {
                 event!(tracing::Level::INFO, "TLS SNI: {:?}", &sni);
@@ -44,10 +49,12 @@ pub async fn get_tls_sni(
             Err(protocols::tls::ProtocolTLSError::WantMoreData(Some(n))) => {
                 data.extend(stream.pre_read_buf(n).await?);
             }
-            Err(e) => {
-                event!(tracing::Level::ERROR, "TLS SNI error: {:?}", e);
+            Err(protocols::tls::ProtocolTLSError::WantMoreData(None)) => {
+                data.extend(stream.pre_read_buf(8192).await?);
             }
-        }
+        };
+        last_length = current_length;
+        current_length = data.len();
     }
-    // Ok((stream.into_inner(), None))
+    Ok((stream.into_inner(), None))
 }
