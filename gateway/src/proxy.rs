@@ -1,14 +1,13 @@
 use std::{
     net::SocketAddr,
-    sync::{Arc, LazyLock},
+    sync::{Arc, LazyLock}, time::Duration,
 };
 
 use anyhow::anyhow;
 use dashmap::DashMap;
-use http_body_util::BodyStream;
 use hyper::{
     Request, Response,
-    body::{Body, Incoming},
+    body::Incoming,
     client,
     service::service_fn,
 };
@@ -20,7 +19,7 @@ use shared::{
     listener::CustomDualStackTcpListener,
     streams::{BufferStream, WrapperBufferStream},
 };
-use tokio::{net::TcpStream, task::JoinHandle};
+use tokio::{net::TcpStream, task::JoinHandle, time::timeout};
 use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
@@ -99,13 +98,7 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
             io,
             service_fn(move |req: Request<Incoming>| {
                 let state = state.clone();
-                async move {
-                    let resp = handle(req, state).await;
-                    if let Err(e) = &resp {
-                        eprintln!("Error handling request: {e}");
-                    }
-                    resp
-                }
+                handle(req, state)
             }),
         )
         .await;
@@ -120,7 +113,22 @@ pub async fn handle(
     req: Request<Incoming>,
     state: Arc<ClientState>,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
-    inner_handle(req, state).await
+    let resp = timeout(Duration::from_secs(60), inner_handle(req, state)).await;
+    match resp {
+        Ok(v) =>  {
+            match v {
+                Ok(v) => Ok(v),
+                Err(_) => {
+                    let resp = Response::builder().status(502).header("Server", "WebGateway").body(CResponse::new_from_string("Bad Gateway"))?;
+                    Ok(resp)
+                }
+            }
+        },
+        Err(_) => {
+            let resp = Response::builder().status(522).header("Server", "WebGateway").body(CResponse::new_from_string("Timeout"))?;
+            Ok(resp)
+        }
+    }
 }
 
 async fn inner_handle(

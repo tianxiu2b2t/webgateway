@@ -14,6 +14,18 @@ pub enum CResponse {
     Error(Full<Bytes>),
 }
 
+impl From<String> for CResponse {
+    fn from(s: String) -> Self {
+        CResponse::Error(Full::new(Bytes::from(s)))
+    }
+}
+
+impl CResponse {
+    pub fn new_from_string(value: impl Into<String>) -> Self {
+        CResponse::from(value.into())
+    }
+}
+
 impl http_body::Body for CResponse {
     type Data = bytes::Bytes;
     type Error = Box<dyn std::error::Error + Send + Sync>;
