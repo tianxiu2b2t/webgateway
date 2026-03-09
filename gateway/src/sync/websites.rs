@@ -8,7 +8,7 @@ use dashmap::DashMap;
 use regex::Regex;
 use shared::database::{get_database, websites::DatabaseWebsiteQuery};
 use tokio::sync::RwLock;
-use tracing::event;
+use tracing::{Level, event};
 
 use crate::state::WebSiteRunner;
 static LAST_SYNC: LazyLock<RwLock<DateTime<Utc>>> =
@@ -22,6 +22,7 @@ static CACHE_WEBSITES_EXPIRE: LazyLock<Arc<Duration>> =
 pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
     let mut ports = vec![];
     let mut last_sync = { *LAST_SYNC.read().await };
+    event!(Level::DEBUG, "Last sync websites time: {last_sync}");
     let websites = get_database()
         .get_websites_before_updated_at(&last_sync)
         .await?;

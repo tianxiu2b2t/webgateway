@@ -39,9 +39,9 @@ pub async fn main() -> anyhow::Result<()> {
 
 pub async fn sync_config() -> anyhow::Result<()> {
     event!(Level::DEBUG, "Syncing config at {}", chrono::Local::now());
-    event!(Level::INFO, "Syncing certificates");
+    event!(Level::DEBUG, "Syncing certificates");
     sync_certificates().await?;
-    event!(Level::INFO, "Syncing websites");
+    event!(Level::DEBUG, "Syncing websites");
     let ports = sync_websites().await?;
     for port in ports {
         listen(port).await?;

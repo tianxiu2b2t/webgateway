@@ -40,11 +40,6 @@ static TLS_ACCEPTOR: LazyLock<Arc<TlsAcceptor>> =
     LazyLock::new(|| Arc::new(TlsAcceptor::from(SERVER_CONFIG.clone())));
 
 async fn accept(listener: CustomDualStackTcpListener) {
-    event!(
-        Level::INFO,
-        "Listening on {:?}",
-        listener.local_addrs().unwrap()
-    );
     loop {
         let (stream, addr) = match listener.accept().await {
             Ok(v) => v,

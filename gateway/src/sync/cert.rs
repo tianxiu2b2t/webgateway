@@ -14,6 +14,7 @@ use shared::{
     default::sign_default_certificates,
 };
 use tokio::sync::RwLock;
+use tracing::{Level, event};
 pub static CERTIFICATES: LazyLock<DashMap<String, Arc<rustls::sign::CertifiedKey>>> =
     LazyLock::new(DashMap::default);
 static DEFAULT_CERTIFICATE: LazyLock<Arc<CertifiedKey>> = LazyLock::new(|| {
@@ -51,6 +52,7 @@ impl ResolvesServerCert for AutoCertificate {
 
 pub async fn sync_certificates() -> anyhow::Result<()> {
     let mut last_sync = { *LAST_SYNC.read().await };
+    event!(Level::DEBUG, "Last sync certificates time: {last_sync}");
     let certificates = get_database()
         .get_certificates_before_updated_at(&last_sync)
         .await?;
