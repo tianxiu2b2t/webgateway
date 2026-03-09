@@ -1,4 +1,7 @@
-use std::{net::{IpAddr, SocketAddr}, sync::Arc};
+use std::{
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+};
 
 use anyhow::anyhow;
 use protocols::tls::ProtocolTLS;

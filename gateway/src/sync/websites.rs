@@ -30,7 +30,12 @@ pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
         let site = Arc::new(WebSiteRunner::new(website).await?);
         for domain in &site.inner().hosts {
             if !WEBSITES.contains_key(domain) {
-                event!(tracing::Level::INFO, "Sync website: {:?} => {:?}", domain, site.inner().backends);
+                event!(
+                    tracing::Level::INFO,
+                    "Sync website: {:?} => {:?}",
+                    domain,
+                    site.inner().backends
+                );
             }
             WEBSITES.insert(domain.to_owned(), site.clone());
         }

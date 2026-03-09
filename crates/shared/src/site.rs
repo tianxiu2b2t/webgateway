@@ -8,4 +8,3 @@ pub async fn get_favicon(site: Url) -> Option<Vec<u8>> {
         None => favicon::get_favicon_from_index(&site).await,
     }
 }
-

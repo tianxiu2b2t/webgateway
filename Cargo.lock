@@ -1136,8 +1136,11 @@ name = "gateway"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "chrono",
  "dashmap",
+ "http-body",
+ "http-body-util",
  "hyper",
  "hyper-util",
  "protocols",
@@ -1389,6 +1392,7 @@ dependencies = [
  "http",
  "http-body",
  "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

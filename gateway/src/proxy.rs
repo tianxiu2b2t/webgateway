@@ -5,9 +5,10 @@ use std::{
 
 use anyhow::anyhow;
 use dashmap::DashMap;
+use http_body_util::BodyStream;
 use hyper::{
-    Request,
-    body::Incoming,
+    Request, Response,
+    body::{Body, Incoming},
     client,
     service::service_fn,
 };
@@ -24,8 +25,7 @@ use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
 use crate::{
-    state::ClientState,
-    sync::{SERVER_CONFIG, websites::get_website},
+    response::CResponse, state::ClientState, sync::{SERVER_CONFIG, websites::get_website}
 };
 pub mod backends;
 pub mod protocols;
@@ -58,6 +58,9 @@ async fn accept(listener: CustomDualStackTcpListener) {
 }
 
 pub async fn listen(port: u16) -> anyhow::Result<()> {
+    if LISTENERS.contains_key(&port) {
+        return Ok(());
+    }
     let thread = tokio::spawn(async move {
         let listener = CustomDualStackTcpListener::new_by_port(port).await.unwrap();
         event!(
@@ -86,7 +89,10 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
         None => stream,
     };
     // if is proxyprotocol
-    let state = Arc::new(ClientState { tls, remote_addr: addr.ip() });
+    let state = Arc::new(ClientState {
+        tls,
+        remote_addr: addr.ip(),
+    });
     let io = TokioIo::new(final_stream);
     let r = HTTP_BUILDER
         .serve_connection(
@@ -109,13 +115,20 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
     Ok(())
 }
 
+
 pub async fn handle(
+    req: Request<Incoming>,
+    state: Arc<ClientState>,
+) -> anyhow::Result<hyper::Response<CResponse>> {
+    inner_handle(req, state).await
+}
+
+async fn inner_handle(
     mut req: Request<Incoming>,
     state: Arc<ClientState>,
-) -> anyhow::Result<hyper::Response<Incoming>> {
+) -> anyhow::Result<hyper::Response<CResponse>> {
     let host = state.tls.clone().map(|v| v.hostname).unwrap_or_else(|| {
-        req
-            .headers()
+        req.headers()
             .get("host")
             .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
     });
@@ -126,7 +139,7 @@ pub async fn handle(
     let site = get_website(&host)
         .await
         .ok_or(anyhow!("No Runner Website"))?;
-    // let conn = TcpStream::connect(("192.168.2.254", 23333)).await?;
+
     let conn = site.pool().get().await?;
     let io = TokioIo::new(conn);
     let (mut c_req, connection) = client::conn::http1::handshake(io).await?;
@@ -139,12 +152,19 @@ pub async fn handle(
     // set X-Real-Ip
     headers.insert("X-Real-Ip", format!("{}", state.remote_addr).parse()?);
     headers.insert("X-Forwarded-For", format!("{}", state.remote_addr).parse()?);
-    headers.insert("X-Forwarded-Proto", (match state.tls {
-        Some(_) => "https",
-        None => "http",
-    }).to_string().parse()?);
+    headers.insert(
+        "X-Forwarded-Proto",
+        (match state.tls {
+            Some(_) => "https",
+            None => "http",
+        })
+        .to_string()
+        .parse()?,
+    );
     headers.insert("X-Forwarded-Host", host.parse()?);
     let mut resp = c_req.send_request(req).await?;
     resp.headers_mut().insert("Server", "WebGateway".parse()?);
-    Ok(resp)
+    let (parts, b) = resp.into_parts();
+    let final_resp = Response::from_parts(parts, CResponse::Incoming(b));
+    Ok(final_resp)
 }
