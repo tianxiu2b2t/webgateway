@@ -5,10 +5,7 @@ use std::{
 
 use dashmap::DashMap;
 use hyper::{
-    Request, Response,
-    body::Incoming,
-    client,
-    service::service_fn,
+    Request, Response, Version, body::Incoming, client, service::service_fn
 };
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
