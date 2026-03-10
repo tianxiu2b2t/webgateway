@@ -9,7 +9,7 @@
 pub mod certificate;
 pub mod dnsprovider;
 pub mod websites;
-
+pub mod access;
 // #[derive(Debug, Clone, Serialize, Deserialize)]
 // pub enum ProxyProtocolType {
 //     V1,

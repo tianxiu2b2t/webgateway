@@ -3,7 +3,6 @@ use std::{
     sync::{Arc, LazyLock}, time::Duration,
 };
 
-use anyhow::anyhow;
 use dashmap::DashMap;
 use hyper::{
     Request, Response,
@@ -24,7 +23,7 @@ use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
 use crate::{
-    response::CResponse, state::ClientState, sync::{SERVER_CONFIG, websites::get_website}
+    response::CResponse, state::{BaseClientState, ClientState}, sync::{SERVER_CONFIG, websites::get_website}
 };
 pub mod backends;
 pub mod protocols;
@@ -75,6 +74,7 @@ pub async fn listen(port: u16) -> anyhow::Result<()> {
 }
 
 async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Result<()> {
+    let local_addr = stream.local_addr()?;
     event!(Level::INFO, "Connection from {}", addr);
     let stream = BufferStream::new(WrapperBufferStream::Raw(stream));
     let (stream, _) = protocols::get_proxy_protocol(stream).await?;
@@ -88,9 +88,10 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
         None => stream,
     };
     // if is proxyprotocol
-    let state = Arc::new(ClientState {
+    let state = Arc::new(BaseClientState {
         tls,
         remote_addr: addr.ip(),
+        local_addr: local_addr.ip(),
     });
     let io = TokioIo::new(final_stream);
     let r = HTTP_BUILDER
@@ -111,8 +112,29 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
 
 pub async fn handle(
     req: Request<Incoming>,
-    state: Arc<ClientState>,
+    base_state: Arc<BaseClientState>,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
+    println!("{:?} {:?}", req.uri(), base_state);
+    let host = base_state.tls.clone().map(|v| v.hostname).unwrap_or_else(|| {
+        req.headers()
+            .get("host")
+            .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
+    }).unwrap_or_else(|| {
+        req.uri().host().map(|v| v.to_string()).unwrap_or_default()
+    });
+    let site = match get_website(&host)
+        .await {
+        Some(v) => v,
+        None => {
+            let resp = Response::builder().status(404).header("Server", "WebGateway").body(CResponse::new_from_string("Not Found Gateway"))?;
+            return Ok(resp);
+        }
+    };
+    let state = ClientState {
+        base: base_state,
+        website: site.clone(),
+        host,
+    };
     let resp = timeout(Duration::from_secs(60), inner_handle(req, state)).await;
     match resp {
         Ok(v) =>  {
@@ -133,20 +155,9 @@ pub async fn handle(
 
 async fn inner_handle(
     mut req: Request<Incoming>,
-    state: Arc<ClientState>,
+    state: ClientState,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
-    let host = state.tls.clone().map(|v| v.hostname).unwrap_or_else(|| {
-        req.headers()
-            .get("host")
-            .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
-    });
-    if host.is_none() {
-        return Err(anyhow!("No Host"));
-    }
-    let host = host.unwrap();
-    let site = get_website(&host)
-        .await
-        .ok_or(anyhow!("No Runner Website"))?;
+    let site = &state.website;
 
     let conn = site.pool().get().await?;
     let io = TokioIo::new(conn);
@@ -158,18 +169,15 @@ async fn inner_handle(
     });
     let headers = req.headers_mut();
     // set X-Real-Ip
-    headers.insert("X-Real-Ip", format!("{}", state.remote_addr).parse()?);
-    headers.insert("X-Forwarded-For", format!("{}", state.remote_addr).parse()?);
+    headers.insert("X-Real-Ip", format!("{}", &state.remote_addr()).parse()?);
+    headers.insert("X-Forwarded-For", format!("{}", state.remote_addr()).parse()?);
     headers.insert(
         "X-Forwarded-Proto",
-        (match state.tls {
-            Some(_) => "https",
-            None => "http",
-        })
+        state.scheme()
         .to_string()
         .parse()?,
     );
-    headers.insert("X-Forwarded-Host", host.parse()?);
+    headers.insert("X-Forwarded-Host", state.host.parse()?);
     let mut resp = c_req.send_request(req).await?;
     resp.headers_mut().insert("Server", "WebGateway".parse()?);
     let (parts, b) = resp.into_parts();

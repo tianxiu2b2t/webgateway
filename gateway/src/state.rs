@@ -50,7 +50,42 @@ impl WebSiteRunner {
 }
 
 #[derive(Debug, Clone)]
-pub struct ClientState {
+pub struct BaseClientState {
     pub tls: Option<ProtocolTLS>,
     pub remote_addr: IpAddr,
+    pub local_addr: IpAddr,
+}
+
+#[derive(Debug, Clone)]
+pub struct ClientState {
+    pub base: Arc<BaseClientState>,
+    pub website: Arc<WebSiteRunner>,
+    pub host: String,
+}
+
+impl ClientState {
+    pub fn new(base: Arc<BaseClientState>, website: Arc<WebSiteRunner>, host: String) -> Self {
+        Self {
+            base,
+            website,
+            host,
+        }
+    }
+
+    pub fn tls(&self) -> Option<&ProtocolTLS> {
+        self.base.tls.as_ref()
+    }
+    pub fn remote_addr(&self) -> IpAddr {
+        self.base.remote_addr
+    }
+    pub fn local_addr(&self) -> IpAddr {
+        self.base.local_addr
+    }
+    pub fn scheme(&self) -> &str {
+        if self.tls().is_some() {
+            "https"
+        } else {
+            "http"
+        }
+    }
 }
