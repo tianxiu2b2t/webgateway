@@ -12,3 +12,7 @@ hex = "0.4.3"
 thiserror = "2.0.18"
 tokio = { version = "1.50.0", features = ["io-util", "net"] }
 num-traits = "0.2.19"
+
+[build-dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "1.0.6"
