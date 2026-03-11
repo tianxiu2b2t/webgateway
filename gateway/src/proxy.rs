@@ -1,5 +1,5 @@
 use std::{
-    net::SocketAddr, str::FromStr, sync::{Arc, LazyLock}, time::Duration
+    net::SocketAddr, sync::{Arc, LazyLock}, time::Duration
 };
 
 use dashmap::DashMap;
@@ -17,7 +17,6 @@ use shared::{
 use tokio::{net::TcpStream, task::JoinHandle, time::timeout};
 use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
-use url::Url;
 
 use crate::{
     response::CResponse, state::{BaseClientState, ClientState}, sync::{SERVER_CONFIG, websites::get_website}
@@ -38,16 +37,12 @@ async fn accept(listener: CustomDualStackTcpListener) {
     loop {
         let (stream, addr) = match listener.accept().await {
             Ok(v) => v,
-            Err(e) => {
-                println!("Error accepting connection: {}", e);
+            Err(_) => {
                 continue;
             }
         };
         tokio::spawn(async move {
-            let r = handle_connection(stream, addr).await;
-            if let Err(e) = r {
-                println!("Error handling connection: {}", e);
-            }
+            let _ = handle_connection(stream, addr).await;
         });
     }
 }
@@ -91,7 +86,7 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
         local_addr: local_addr.ip(),
     });
     let io = TokioIo::new(final_stream);
-    let r = HTTP_BUILDER
+    let _ = HTTP_BUILDER
         .serve_connection(
             io,
             service_fn(move |req: Request<Incoming>| {
@@ -100,9 +95,6 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
             }),
         )
         .await;
-    if let Err(e) = r {
-        println!("Error serving connection: {}", e);
-    }
     Ok(())
 }
 
@@ -165,27 +157,18 @@ async fn inner_handle(
             eprintln!("Connection error: {}", err);
         }
     });
-    // let headers = req.headers_mut();
-    // // set X-Real-Ip
-    // headers.insert("X-Real-Ip", format!("{}", &state.remote_addr()).parse()?);
-    // headers.insert("X-Forwarded-For", format!("{}", state.remote_addr()).parse()?);
-    // headers.insert(
-    //     "X-Forwarded-Proto",
-    //     state.scheme()
-    //     .to_string()
-    //     .parse()?,
-    // );
-    // headers.insert("X-Forwarded-Host", state.host.parse()?);
     let origin_version = origin_req.version();
     let mut req = Request::builder().method(origin_req.method()).version(Version::HTTP_11);
     if let Some(v) = req.headers_mut() { v.extend(origin_req.headers().clone()) }
     if let Some(v) = req.extensions_mut() { v.extend(origin_req.extensions().clone()) }
-    req = req.uri(pool.get_path().map_or_else(|| Url::from_str(origin_req.uri().path()).unwrap(), |v| {
-        v.join(origin_req.uri().path()).unwrap()
-    }).as_str());
+    req = req.uri(pool.get_path().map_or_else(|| origin_req.uri().path().to_string(), |v| {
+        let a = v.join(origin_req.uri().path()).unwrap();
+        a.path().to_string()
+    }));
     
     // insert custom headers
     let headers = req.headers_mut().unwrap();
+    headers.insert("Host", state.host.parse()?);
     headers.insert("X-Real-Ip", format!("{}", &state.remote_addr()).parse()?);
     headers.insert("X-Forwarded-For", format!("{}", state.remote_addr()).parse()?);
     headers.insert(
@@ -195,8 +178,9 @@ async fn inner_handle(
         .parse()?,
     );
     headers.insert("X-Forwarded-Host", state.host.parse()?);
+    let final_req = req.body(origin_req.into_body()).unwrap();
 
-    let mut resp = c_req.send_request(req.body(origin_req.into_body()).unwrap()).await?;
+    let mut resp = c_req.send_request(final_req).await?;
     resp.headers_mut().insert("Server", "WebGateway".parse()?);
     let (mut parts, b) = resp.into_parts();
     parts.version = origin_version;
