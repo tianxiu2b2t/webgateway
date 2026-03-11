@@ -19,7 +19,12 @@
     <div class="websites">
         <Panel class="site" v-for="_ in websites">
             <div class="site-overview">
-                <SvgIcon name="common-earth"></SvgIcon>
+                <SvgIcon
+                    name="common-earth"
+                    class="site-default-icon"
+                    size="default"
+                ></SvgIcon>
+                <span class="line"></span>
             </div>
             <div class="site-content"></div>
         </Panel>
@@ -101,5 +106,22 @@ function toggleAddWebsite() {
 
 .site {
     display: flex;
+}
+.site-default-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    fill: var(--main-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+.site .line {
+    width: 1px;
+    content: '';
+    border: 1px solid var(--main-color);
+    flex-shrink: 0;
+    transform: rotate(180deg);
 }
 </style>
