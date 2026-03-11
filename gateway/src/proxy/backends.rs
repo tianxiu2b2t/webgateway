@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::pin::Pin;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::task::{Context, Poll};
@@ -167,9 +166,7 @@ impl BackendConnectionPoolConfig {
     }
 
     pub fn url(mut self, url: Url) -> Self {
-        self.url = Some(
-            Url::from_str(url.path()).unwrap()
-        );
+        self.url = Some(url);
         self
     }
 }

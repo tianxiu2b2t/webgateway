@@ -20,13 +20,11 @@ impl WebSiteRunner {
     pub async fn new(inner: DatabaseWebsite) -> anyhow::Result<Self> {
         // only get first
         // TODO
-        println!("Found {:?} backends", inner.backends);
         let backend = inner
             .backends
             .first()
             .ok_or(anyhow!("No found any backends"))?;
         let hostname = backend.url.host_str().ok_or(anyhow!("No found any host"))?;
-        println!("Found host: {hostname}");
         // dns resolver it
         let addrs = lookup_host(format!(
             "{hostname}:{}",

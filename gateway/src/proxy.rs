@@ -111,7 +111,6 @@ pub async fn handle(
     req: Request<Incoming>,
     base_state: Arc<BaseClientState>,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
-    println!("{:?} {:?}", req.uri(), base_state);
     let host = base_state.tls.clone().map(|v| v.hostname).unwrap_or_else(|| {
         req.headers()
             .get("host")
@@ -137,7 +136,8 @@ pub async fn handle(
         Ok(v) =>  {
             match v {
                 Ok(v) => Ok(v),
-                Err(_) => {
+                Err(e) => {
+                    eprintln!("Error handling request: {}", e);
                     let resp = Response::builder().status(502).header("Server", "WebGateway").body(CResponse::new_from_string("Bad Gateway"))?;
                     Ok(resp)
                 }
