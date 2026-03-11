@@ -1,6 +1,5 @@
 use std::{
-    net::SocketAddr,
-    sync::{Arc, LazyLock}, time::Duration,
+    net::SocketAddr, str::FromStr, sync::{Arc, LazyLock}, time::Duration
 };
 
 use dashmap::DashMap;
@@ -18,6 +17,7 @@ use shared::{
 use tokio::{net::TcpStream, task::JoinHandle, time::timeout};
 use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
+use url::Url;
 
 use crate::{
     response::CResponse, state::{BaseClientState, ClientState}, sync::{SERVER_CONFIG, websites::get_website}
@@ -151,12 +151,13 @@ pub async fn handle(
 }
 
 async fn inner_handle(
-    mut req: Request<Incoming>,
+    origin_req: Request<Incoming>,
     state: ClientState,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
     let site = &state.website;
 
-    let conn = site.pool().get().await?;
+    let pool = site.pool();
+    let conn = pool.get().await?;
     let io = TokioIo::new(conn);
     let (mut c_req, connection) = client::conn::http1::handshake(io).await?;
     tokio::task::spawn(async move {
@@ -164,8 +165,27 @@ async fn inner_handle(
             eprintln!("Connection error: {}", err);
         }
     });
-    let headers = req.headers_mut();
-    // set X-Real-Ip
+    // let headers = req.headers_mut();
+    // // set X-Real-Ip
+    // headers.insert("X-Real-Ip", format!("{}", &state.remote_addr()).parse()?);
+    // headers.insert("X-Forwarded-For", format!("{}", state.remote_addr()).parse()?);
+    // headers.insert(
+    //     "X-Forwarded-Proto",
+    //     state.scheme()
+    //     .to_string()
+    //     .parse()?,
+    // );
+    // headers.insert("X-Forwarded-Host", state.host.parse()?);
+    let origin_version = origin_req.version();
+    let mut req = Request::builder().method(origin_req.method()).version(Version::HTTP_11);
+    if let Some(v) = req.headers_mut() { v.extend(origin_req.headers().clone()) }
+    if let Some(v) = req.extensions_mut() { v.extend(origin_req.extensions().clone()) }
+    req = req.uri(pool.get_path().map_or_else(|| Url::from_str(origin_req.uri().path()).unwrap(), |v| {
+        v.join(origin_req.uri().path()).unwrap()
+    }).as_str());
+    
+    // insert custom headers
+    let headers = req.headers_mut().unwrap();
     headers.insert("X-Real-Ip", format!("{}", &state.remote_addr()).parse()?);
     headers.insert("X-Forwarded-For", format!("{}", state.remote_addr()).parse()?);
     headers.insert(
@@ -175,9 +195,11 @@ async fn inner_handle(
         .parse()?,
     );
     headers.insert("X-Forwarded-Host", state.host.parse()?);
-    let mut resp = c_req.send_request(req).await?;
+
+    let mut resp = c_req.send_request(req.body(origin_req.into_body()).unwrap()).await?;
     resp.headers_mut().insert("Server", "WebGateway".parse()?);
-    let (parts, b) = resp.into_parts();
+    let (mut parts, b) = resp.into_parts();
+    parts.version = origin_version;
     let final_resp = Response::from_parts(parts, CResponse::Incoming(b));
     Ok(final_resp)
 }

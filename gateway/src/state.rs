@@ -34,9 +34,10 @@ impl WebSiteRunner {
         ))
         .await?
         .collect::<Vec<SocketAddr>>();
+        let url = backend.url.clone();
         Ok(Self {
             inner,
-            pool: BackendConnectionPool::new(BackendConnectionPoolConfig::new_from_targets(addrs)),
+            pool: BackendConnectionPool::new(BackendConnectionPoolConfig::new_from_targets(addrs).url(url)),
         })
     }
 

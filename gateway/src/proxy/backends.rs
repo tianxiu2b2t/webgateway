@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::task::{Context, Poll};
@@ -13,6 +14,7 @@ use shared::streams::WrapperBufferStream;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::net::TcpStream;
 use tokio::sync::{Mutex, Semaphore};
+use url::Url;
 
 // ---------- BackendConnection（只负责包装流，无状态）--------
 #[derive(Debug)]
@@ -126,6 +128,7 @@ pub struct BackendConnectionPoolConfig {
     pub tls: bool,
     pub tls_config: Option<Arc<ClientConfig>>,
     pub hostname: Option<String>,
+    pub url: Option<Url>,
 }
 
 impl BackendConnectionPoolConfig {
@@ -136,6 +139,7 @@ impl BackendConnectionPoolConfig {
             tls: false,
             tls_config: None,
             hostname: None,
+            url: None,
         }
     }
 
@@ -146,6 +150,7 @@ impl BackendConnectionPoolConfig {
             tls: false,
             tls_config: None,
             hostname: None,
+            url: None,
         }
     }
 
@@ -158,6 +163,13 @@ impl BackendConnectionPoolConfig {
         self.tls = true;
         self.tls_config = Some(config);
         self.hostname = hostname;
+        self
+    }
+
+    pub fn url(mut self, url: Url) -> Self {
+        self.url = Some(
+            Url::from_str(url.path()).unwrap()
+        );
         self
     }
 }
@@ -259,6 +271,10 @@ impl BackendConnectionPool {
         }
         let mut idle = self.idle.lock().await;
         idle.push_back(conn);
+    }
+
+    pub fn get_path(&self) -> Option<&Url> {
+        self.config.url.as_ref()
     }
 }
 
