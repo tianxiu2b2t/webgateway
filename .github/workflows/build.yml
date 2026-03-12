@@ -26,9 +26,12 @@ jobs:
         uses: ./.github/actions/setup-toolchain
         with:
           rust-version: "stable"
-          install-dependencies: "true"
+          node_version: 20
           github_actor: "tianxiu2b2t"
           github_token: ${{ secrets.GH_TOKEN }}
+
+      - name: Build Frontend
+        uses: ./.github/actions/build-frontend
 
       - name: Build release
         uses: ./.github/actions/build
