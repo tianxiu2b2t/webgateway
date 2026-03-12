@@ -50,6 +50,7 @@ jobs:
           ls ./dashboard/frontend/dist
 
           cp -r ./dashboard/frontend/dist/* ./dashboard/frontend/run/dist/
+          ls ./dashboard/frontend/run/dist
 
       # - name: Build gateway and push Docker image
       #   uses: docker/build-push-action@v5
