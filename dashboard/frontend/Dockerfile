@@ -2,9 +2,10 @@ FROM nginx:alpine
 
 RUN apk add --no-cache gettext
 
-COPY dist /usr/share/nginx/html
-COPY default.conf.template /etc/nginx/templates/
-COPY entrypoint.sh /entrypoint.sh
+ADD dist /usr/share/nginx/html
+
+ADD default.conf.template /etc/nginx/templates/
+ADD entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
 
