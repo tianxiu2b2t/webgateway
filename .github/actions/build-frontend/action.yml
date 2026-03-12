@@ -1,0 +1,22 @@
+name: "Build Dashboard Frontend"
+description: "Build Dashboard Frontend for release or debug"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # build it
+    - name: Build and copy build artifacts
+      shell: bash
+      run: |
+        cd dashboard/frontend
+        yarn install
+        yarn build
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: webgateway-dashboard-frontend
+        path: dashboard/frontend/dist/*

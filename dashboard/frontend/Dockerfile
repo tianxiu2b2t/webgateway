@@ -1,12 +1,13 @@
-FROM node:22
+FROM nginx:alpine
 
-# cp builds to the container
-WORKDIR /opt/webgateway
-ADD . .
+RUN apk add --no-cache gettext
 
-RUN apt-get update && apt-get install -y yarnpkg \
-    && apt-get clean && rm -rf /var/lib/apt/lists/* \
-    && yarnpkg install && yarnpkg build
+COPY dist /usr/share/nginx/html
+COPY default.conf.template /etc/nginx/templates/
+COPY entrypoint.sh /entrypoint.sh
 
-CMD ["yarnpkg", "vite", "preview"]
-EXPOSE 5173
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+CMD ["nginx", "-g", "daemon off;"]
