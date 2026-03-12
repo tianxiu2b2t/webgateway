@@ -1,7 +1,7 @@
 use std::sync::{Arc, LazyLock};
 
 use rustls::ServerConfig;
-use tokio_schedule::Job;
+use shared::database::get_database;
 use tracing::{Level, event};
 
 use crate::{
@@ -31,11 +31,54 @@ pub async fn main() -> anyhow::Result<()> {
         event!(Level::ERROR, "Failed to sync first config: {e}");
         return Err(e);
     }
-    tokio::spawn(tokio_schedule::every(10).seconds().perform(|| async {
-        if let Err(e) = sync_config().await {
-            event!(Level::ERROR, "Failed to sync config: {e}");
-        }
-    }));
+    // tokio::spawn(tokio_schedule::every(10).seconds().perform(|| async {
+    //     if let Err(e) = sync_config().await {
+    //         event!(Level::ERROR, "Failed to sync config: {e}");
+    //     }
+    // }));
+
+    tokio::spawn(async move {
+        match get_database()
+            .listen_service_fn("websites", async |_| 
+            {
+                event!(Level::INFO, "Recvied notification, syncing websites");
+                match sync_websites().await {
+                    Ok(ports) => {
+                        for port in ports {
+                            let r = listen(port).await;
+                            if let Err(e) = r {
+                                event!(Level::ERROR, "Failed to listen port {port}: {e}");
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        event!(Level::ERROR, "Failed to sync websites: {e}");
+                    }
+                }})
+                .await
+            {
+            Ok(()) => {}
+            Err(e) => event!(Level::ERROR, "Failed to listen websites: {e}"),
+        };
+    });
+
+    tokio::spawn(async move {
+        match get_database()
+            .listen_service_fn("certificates", async |_| {
+                event!(Level::INFO, "Recvied notification, syncing certificates");
+                match sync_certificates().await {
+                    Ok(()) => {}
+                    Err(e) => {
+                        event!(Level::ERROR, "Failed to sync certificates: {e}");
+                    }
+                }
+            })
+            .await
+        {
+            Ok(()) => {}
+            Err(e) => event!(Level::ERROR, "Failed to listen certificates: {e}"),
+        };
+    });
     Ok(())
 }
 

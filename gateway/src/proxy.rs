@@ -108,9 +108,7 @@ pub async fn handle(
         .headers()
         .get("host")
         .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
-        .unwrap_or_else(|| {
-            req.uri().host().map(|v| v.to_string()).unwrap_or_default()
-        });
+        .unwrap_or_else(|| req.uri().host().map(|v| v.to_string()).unwrap_or_default());
     // let host = base_state.tls.clone().map(|v| {
     //     println!("{:?}", &v.hostname);
     //     v.hostname

@@ -33,6 +33,7 @@ impl DatabaseWebsiteInitializer for Database {
         ] {
             sqlx::query(sql).execute(&self.pool).await?;
         }
+        self.create_trigger_notify("websites").await?;
         Ok(())
     }
 }

@@ -30,6 +30,7 @@ impl DatabaseDNSProviderInitializer for Database {
         )
         .execute(&self.pool)
         .await?;
+        self.create_trigger_notify("dns_providers").await?;
         Ok(())
     }
 }

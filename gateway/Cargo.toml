@@ -14,7 +14,6 @@ tracing = "0.1.44"
 utils = { path = "../crates/utils" }
 rustls = "0.23.36"
 tokio-rustls = "0.26.4"
-tokio_schedule = "0.3.2"
 chrono = { version = "0.4.43", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "1.0.4"

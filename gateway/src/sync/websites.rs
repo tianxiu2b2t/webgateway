@@ -64,7 +64,6 @@ pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
     Ok(ports.iter().copied().collect::<Vec<u16>>())
 }
 
-
 pub async fn get_website(domain: impl Into<String>) -> Option<Arc<WebSiteRunner>> {
     let domain = domain.into().to_lowercase();
 
