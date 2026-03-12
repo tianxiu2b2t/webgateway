@@ -3,6 +3,7 @@ use shared::{
     logger::{self, LoggerConfig},
 };
 use tokio::signal::ctrl_c;
+use tracing::Level;
 
 use crate::config::get_config;
 

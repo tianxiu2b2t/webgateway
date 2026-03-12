@@ -28,16 +28,18 @@ pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
         .await?;
     let mut ports = HashSet::new();
     for website in websites {
+        println!("Sync website: {website:?}");
         let site = Arc::new(WebSiteRunner::new(website).await?);
         ports.extend(&site.inner().ports);
         WEBSITES.insert(site.inner().id, site.clone());
+        println!("Insert website: {:?} to websites", &site.inner().hosts);
         for domain in &site.inner().hosts {
             let domain = domain.to_lowercase();
             if domain.contains("*") {
-                event!(Level::DEBUG, "Insert website: {domain} to lazy websites {}", site.inner().id);
+                event!(Level::INFO, "Insert website: {domain} to lazy websites {}", site.inner().id);
                 LAZY_WEBSITES.insert(domain.to_owned(), site.clone());
             } else {
-                event!(Level::DEBUG, "Insert website: {domain} to full websites {}", site.inner().id);
+                event!(Level::INFO, "Insert website: {domain} to full websites {}", site.inner().id);
                 FULL_WEBSITES.insert(domain.to_owned(), site.clone());
             }
         }
@@ -46,10 +48,22 @@ pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
         }
     }
     *LAST_SYNC.write().await = last_sync;
+    println!("Sync websites done");
+    println!("Last sync websites time: {last_sync}");
+    println!("Websites: {:?}", WEBSITES.len());
+    println!("Full websites: {:?}", FULL_WEBSITES.len());
+    println!("Lazy websites: {:?}", LAZY_WEBSITES.len());
     Ok(ports.iter().copied().collect::<Vec<u16>>())
 }
 
-pub async fn get_website(domain: &str) -> Option<Arc<WebSiteRunner>> {
+pub async fn get_website(domain: impl Into<String>) -> Option<Arc<WebSiteRunner>> {
+    let host = domain.into();
+    let r = get_inner_website(&host).await;
+    println!("Get website: {host} -> {r:?}");
+    r
+}
+
+async fn get_inner_website(domain: &str) -> Option<Arc<WebSiteRunner>> {
     let domain = domain.to_lowercase();
 
     // 缓存
