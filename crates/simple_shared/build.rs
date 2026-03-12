@@ -19,5 +19,4 @@ pub fn main() {
     println!("cargo:rustc-env=WG_VERSION={}", cfg.project.version);
     println!("cargo:rustc-env=WG_PROJECT_NAME={}", cfg.project.name);
     // 生成 info.rs
-
 }

@@ -11,14 +11,15 @@ use rustls::{
 };
 use shared::{
     database::{certificate::DatabaseCertificateRepository, get_database},
-    default::sign_default_certificates, objectid::ObjectId,
+    default::sign_default_certificates,
+    objectid::ObjectId,
 };
 use tokio::sync::RwLock;
 use tracing::{Level, event};
 pub static FULL_CERTIFICATES: LazyLock<DashMap<String, Arc<rustls::sign::CertifiedKey>>> =
     LazyLock::new(DashMap::default);
 
-pub static CERTIFICATES: LazyLock<DashMap<ObjectId, Arc<rustls::sign::CertifiedKey>>> = 
+pub static CERTIFICATES: LazyLock<DashMap<ObjectId, Arc<rustls::sign::CertifiedKey>>> =
     LazyLock::new(DashMap::default);
 
 pub static LAZY_CERTIFICATES: LazyLock<DashMap<String, Arc<rustls::sign::CertifiedKey>>> =
@@ -87,15 +88,14 @@ pub async fn sync_certificates() -> anyhow::Result<()> {
 fn lookup_certificate(host: &str) -> Option<Arc<CertifiedKey>> {
     let host = host.to_lowercase();
 
-    // 1. 检查缓存
-    if let Some(cached) = CACHE_CERTIFICATES.read().unwrap().get(&host) {
-        return Some(cached.clone());
-    }
-
     // 2. 精确匹配
     if let Some(cert) = FULL_CERTIFICATES.get(&host) {
         insert_cache(&host, cert.clone());
         return Some(cert.clone());
+    }
+    // 1. 检查缓存
+    if let Some(cached) = CACHE_CERTIFICATES.read().unwrap().get(&host) {
+        return Some(cached.clone());
     }
 
     // 3. 通配符匹配：按模式长度降序（更具体的优先）

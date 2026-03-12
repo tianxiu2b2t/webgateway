@@ -1,11 +1,11 @@
 use std::{
-    net::SocketAddr, sync::{Arc, LazyLock}, time::Duration
+    net::SocketAddr,
+    sync::{Arc, LazyLock},
+    time::Duration,
 };
 
 use dashmap::DashMap;
-use hyper::{
-    Request, Response, Version, body::Incoming, client, service::service_fn
-};
+use hyper::{Request, Response, Version, body::Incoming, client, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server::conn::auto::Builder,
@@ -19,7 +19,9 @@ use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
 use crate::{
-    response::CResponse, state::{BaseClientState, ClientState}, sync::{SERVER_CONFIG, websites::get_website}
+    response::CResponse,
+    state::{BaseClientState, ClientState},
+    sync::{SERVER_CONFIG, websites::get_website},
 };
 pub mod backends;
 pub mod protocols;
@@ -98,28 +100,37 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
     Ok(())
 }
 
-
 pub async fn handle(
     req: Request<Incoming>,
     base_state: Arc<BaseClientState>,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
-    let host = base_state.tls.clone().map(|v| v.hostname).unwrap_or_else(|| {
-        req.headers()
-            .get("host")
-            .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
-    }).unwrap_or_else(|| {
-        req.uri().host().map(|v| v.to_string()).unwrap_or_default()
-    });
-    event!(Level::INFO, "Request from {} to {}", base_state.remote_addr, host);
-    let site = match get_website(&host)
-        .await {
+    let host = req
+        .headers()
+        .get("host")
+        .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
+        .unwrap_or_else(|| {
+            req.uri().host().map(|v| v.to_string()).unwrap_or_default()
+        });
+    // let host = base_state.tls.clone().map(|v| {
+    //     println!("{:?}", &v.hostname);
+    //     v.hostname
+    // }).unwrap_or_else(|| {
+    //     let r = req.headers()
+    //         .get("host")
+    //         .and_then(|v| v.to_str().ok().map(|v| v.to_string()));
+    //     println!("Host: {:?}", r);
+    //     r
+    // })
+    let site = match get_website(&host).await {
         Some(v) => v,
         None => {
-            let resp = Response::builder().status(404).header("Server", "WebGateway").body(CResponse::new_from_string("Not Found Gateway"))?;
+            let resp = Response::builder()
+                .status(404)
+                .header("Server", "WebGateway")
+                .body(CResponse::new_from_string("Not Found Gateway"))?;
             return Ok(resp);
         }
     };
-    event!(Level::INFO, "Request to {:?}", site.inner().hosts);
     let state = ClientState {
         base: base_state,
         website: site.clone(),
@@ -127,18 +138,22 @@ pub async fn handle(
     };
     let resp = timeout(Duration::from_secs(60), inner_handle(req, state)).await;
     match resp {
-        Ok(v) =>  {
-            match v {
-                Ok(v) => Ok(v),
-                Err(e) => {
-                    eprintln!("Error handling request: {}", e);
-                    let resp = Response::builder().status(502).header("Server", "WebGateway").body(CResponse::new_from_string("Bad Gateway"))?;
-                    Ok(resp)
-                }
+        Ok(v) => match v {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                eprintln!("Error handling request: {}", e);
+                let resp = Response::builder()
+                    .status(502)
+                    .header("Server", "WebGateway")
+                    .body(CResponse::new_from_string("Bad Gateway"))?;
+                Ok(resp)
             }
         },
         Err(_) => {
-            let resp = Response::builder().status(522).header("Server", "WebGateway").body(CResponse::new_from_string("Timeout"))?;
+            let resp = Response::builder()
+                .status(522)
+                .header("Server", "WebGateway")
+                .body(CResponse::new_from_string("Timeout"))?;
             Ok(resp)
         }
     }
@@ -160,25 +175,32 @@ async fn inner_handle(
         }
     });
     let origin_version = origin_req.version();
-    let mut req = Request::builder().method(origin_req.method()).version(Version::HTTP_11);
-    if let Some(v) = req.headers_mut() { v.extend(origin_req.headers().clone()) }
-    if let Some(v) = req.extensions_mut() { v.extend(origin_req.extensions().clone()) }
-    req = req.uri(pool.get_path().map_or_else(|| origin_req.uri().path().to_string(), |v| {
-        let a = v.join(&origin_req.uri().path()[1..]).unwrap();
-        a.path().to_string()
-    }));
-    
+    let mut req = Request::builder()
+        .method(origin_req.method())
+        .version(Version::HTTP_11);
+    if let Some(v) = req.headers_mut() {
+        v.extend(origin_req.headers().clone())
+    }
+    if let Some(v) = req.extensions_mut() {
+        v.extend(origin_req.extensions().clone())
+    }
+    req = req.uri(pool.get_path().map_or_else(
+        || origin_req.uri().path().to_string(),
+        |v| {
+            let a = v.join(&origin_req.uri().path()[1..]).unwrap();
+            a.path().to_string()
+        },
+    ));
+
     // insert custom headers
     let headers = req.headers_mut().unwrap();
     headers.insert("Host", state.host.parse()?);
     headers.insert("X-Real-Ip", format!("{}", &state.remote_addr()).parse()?);
-    headers.insert("X-Forwarded-For", format!("{}", state.remote_addr()).parse()?);
     headers.insert(
-        "X-Forwarded-Proto",
-        state.scheme()
-        .to_string()
-        .parse()?,
+        "X-Forwarded-For",
+        format!("{}", state.remote_addr()).parse()?,
     );
+    headers.insert("X-Forwarded-Proto", state.scheme().to_string().parse()?);
     headers.insert("X-Forwarded-Host", state.host.parse()?);
     let final_req = req.body(origin_req.into_body()).unwrap();
 

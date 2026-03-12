@@ -1,16 +1,20 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use simple_shared::objectid::ObjectId;
-use sqlx::{FromRow, Row, postgres::PgRow, types::{Json, Text}};
+use sqlx::{
+    FromRow, Row,
+    postgres::PgRow,
+    types::{Json, Text},
+};
 use sqlx_pg_ext_uint::{c_u16::U16, c_usize::USize};
 
 #[derive(Debug, Clone)]
 pub enum AccessVersion {
     HTTP1,
     HTTP11,
-    HTTP2
+    HTTP2,
 }
 
 impl<'de> Deserialize<'de> for AccessVersion {
@@ -23,7 +27,7 @@ impl<'de> Deserialize<'de> for AccessVersion {
             "http/1.1" => Ok(AccessVersion::HTTP11),
             "http/1.0" => Ok(AccessVersion::HTTP1),
             "http/2.0" => Ok(AccessVersion::HTTP2),
-            _ => Err(serde::de::Error::custom("Invalid HTTP version"))
+            _ => Err(serde::de::Error::custom("Invalid HTTP version")),
         }
     }
 }
@@ -49,7 +53,7 @@ impl FromStr for AccessVersion {
             "http/1.1" => Ok(AccessVersion::HTTP11),
             "http/1.0" => Ok(AccessVersion::HTTP1),
             "http/2.0" => Ok(AccessVersion::HTTP2),
-            _ => Err(std::fmt::Error)
+            _ => Err(std::fmt::Error),
         }
     }
 }
@@ -125,4 +129,3 @@ pub struct AccessCreateResponse {
     pub headers: Vec<(String, String)>,
     pub body_length: usize,
 }
-

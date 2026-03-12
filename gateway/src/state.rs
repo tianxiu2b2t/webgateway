@@ -35,7 +35,9 @@ impl WebSiteRunner {
         let url = backend.url.clone();
         Ok(Self {
             inner,
-            pool: BackendConnectionPool::new(BackendConnectionPoolConfig::new_from_targets(addrs).url(url)),
+            pool: BackendConnectionPool::new(
+                BackendConnectionPoolConfig::new_from_targets(addrs).url(url),
+            ),
         })
     }
 

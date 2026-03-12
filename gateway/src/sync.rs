@@ -16,15 +16,13 @@ pub mod cert;
 pub mod websites;
 
 pub static SERVER_CONFIG: LazyLock<Arc<ServerConfig>> = LazyLock::new(|| {
-    Arc::new(
-        {
-            let mut config = ServerConfig::builder()
-                .with_no_client_auth()
-                .with_cert_resolver(Arc::new(AutoCertificate));
-            config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-            config
-        },
-    )
+    Arc::new({
+        let mut config = ServerConfig::builder()
+            .with_no_client_auth()
+            .with_cert_resolver(Arc::new(AutoCertificate));
+        config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+        config
+    })
 });
 
 pub async fn main() -> anyhow::Result<()> {
