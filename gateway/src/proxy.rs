@@ -162,7 +162,7 @@ async fn inner_handle(
     if let Some(v) = req.headers_mut() { v.extend(origin_req.headers().clone()) }
     if let Some(v) = req.extensions_mut() { v.extend(origin_req.extensions().clone()) }
     req = req.uri(pool.get_path().map_or_else(|| origin_req.uri().path().to_string(), |v| {
-        let a = v.join(origin_req.uri().path()).unwrap();
+        let a = v.join(&origin_req.uri().path()[1..]).unwrap();
         a.path().to_string()
     }));
     
