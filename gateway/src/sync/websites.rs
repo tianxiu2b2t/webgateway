@@ -1,98 +1,85 @@
 use std::{
-    sync::{Arc, LazyLock, RwLock as SyncRwLock},
-    time::Duration,
+    collections::HashSet, sync::{Arc, LazyLock, RwLock as SyncRwLock}, time::Duration
 };
 
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use regex::Regex;
-use shared::database::{get_database, websites::DatabaseWebsiteQuery};
+use shared::{database::{get_database, websites::DatabaseWebsiteQuery}, objectid::ObjectId};
 use tokio::sync::RwLock;
 use tracing::{Level, event};
 
 use crate::state::WebSiteRunner;
 static LAST_SYNC: LazyLock<RwLock<DateTime<Utc>>> =
     LazyLock::new(|| RwLock::new(DateTime::from_timestamp_secs(0).unwrap()));
-static WEBSITES: LazyLock<DashMap<String, Arc<WebSiteRunner>>> = LazyLock::new(DashMap::default);
+static WEBSITES: LazyLock<DashMap<ObjectId, Arc<WebSiteRunner>>> = LazyLock::new(DashMap::default);
+static FULL_WEBSITES: LazyLock<DashMap<String, Arc<WebSiteRunner>>> = LazyLock::new(DashMap::default);
+static LAZY_WEBSITES: LazyLock<DashMap<String, Arc<WebSiteRunner>>> = LazyLock::new(DashMap::default);
 static CACHE_WEBSITES: LazyLock<SyncRwLock<ttl_cache::TtlCache<String, Arc<WebSiteRunner>>>> =
     LazyLock::new(|| SyncRwLock::new(ttl_cache::TtlCache::new((u16::MAX as usize) * 16)));
 static CACHE_WEBSITES_EXPIRE: LazyLock<Arc<Duration>> =
     LazyLock::new(|| Arc::new(Duration::from_hours(2)));
 
 pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
-    let mut ports = vec![];
     let mut last_sync = { *LAST_SYNC.read().await };
     event!(Level::DEBUG, "Last sync websites time: {last_sync}");
     let websites = get_database()
         .get_websites_before_updated_at(&last_sync)
         .await?;
+    let mut ports = HashSet::new();
     for website in websites {
         let site = Arc::new(WebSiteRunner::new(website).await?);
+        ports.extend(&site.inner().ports);
+        WEBSITES.insert(site.inner().id, site.clone());
         for domain in &site.inner().hosts {
-            if !WEBSITES.contains_key(domain) {
-                event!(
-                    tracing::Level::INFO,
-                    "Sync website: {:?} => {:?}",
-                    domain,
-                    site.inner().backends
-                );
+            if domain.contains("*") {
+                LAZY_WEBSITES.insert(domain.to_owned(), site.clone());
+            } else {
+                FULL_WEBSITES.insert(domain.to_owned(), site.clone());
             }
-            WEBSITES.insert(domain.to_owned(), site.clone());
         }
-        for port in &site.inner().ports {
-            if ports.contains(port) {
-                continue;
-            }
-            ports.push(*port);
-        }
-        // compare
         if site.inner().updated_at > last_sync {
             last_sync = site.inner().updated_at;
         }
     }
     *LAST_SYNC.write().await = last_sync;
-    Ok(ports)
+    Ok(ports.iter().copied().collect::<Vec<u16>>())
 }
 
 pub async fn get_website(domain: &str) -> Option<Arc<WebSiteRunner>> {
-    // 1. 先尝试从缓存中获取（读锁）
-    {
-        let cache = CACHE_WEBSITES.read().unwrap();
-        if let Some(cached) = cache.get(domain) {
-            return Some(cached.clone());
-        }
-    } // 读锁在此释放
+    let domain = domain.to_lowercase();
 
-    // 2. 精确匹配：直接从 WEBSITES 中查找
-    if let Some(entry) = WEBSITES.get(domain) {
-        let site = entry.value().clone();
-        // 插入缓存（写锁，double-check 避免重复插入）
-        let mut cache = CACHE_WEBSITES.write().unwrap();
-        if !cache.contains_key(domain) {
-            cache.insert(domain.to_string(), site.clone(), **CACHE_WEBSITES_EXPIRE);
-        }
-        return Some(site);
+    // 缓存
+    if let Some(cached) = CACHE_WEBSITES.read().unwrap().get(&domain) {
+        return Some(cached.clone());
     }
 
-    // 3. 通配符匹配：为了避免长时间持有 DashMap 的锁，先收集所有键值对
-    let entries: Vec<(String, Arc<WebSiteRunner>)> = WEBSITES
+    // 精确匹配
+    if let Some(entry) = FULL_WEBSITES.get(&domain) {
+        insert_cache(&domain, entry.clone());
+        return Some(entry.clone());
+    }
+
+    // 通配符匹配（按模式长度降序）
+    let mut candidates: Vec<_> = LAZY_WEBSITES
         .iter()
         .map(|entry| (entry.key().clone(), entry.value().clone()))
         .collect();
+    candidates.sort_by(|(a, _), (b, _)| b.len().cmp(&a.len()));
 
-    for (pattern, site) in entries {
-        // 支持 "*" 和含有 * 的模式
-        if pattern == "*" || regex_match(domain, &pattern) {
-            // 插入缓存（写锁，double-check）
-            let mut cache = CACHE_WEBSITES.write().unwrap();
-            if !cache.contains_key(domain) {
-                cache.insert(domain.to_string(), site.clone(), **CACHE_WEBSITES_EXPIRE);
-            }
+    for (pattern, site) in candidates {
+        if regex_match(&domain, &pattern) {
+            insert_cache(&domain, site.clone());
             return Some(site);
         }
     }
 
     None
+}
+
+fn insert_cache(domain: &str, site: Arc<WebSiteRunner>) {
+    let mut cache = CACHE_WEBSITES.write().unwrap();
+    cache.insert(domain.to_string(), site, **CACHE_WEBSITES_EXPIRE);
 }
 
 fn regex_match(host: &str, pattern: &str) -> bool {

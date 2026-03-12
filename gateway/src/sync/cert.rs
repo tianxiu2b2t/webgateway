@@ -11,12 +11,19 @@ use rustls::{
 };
 use shared::{
     database::{certificate::DatabaseCertificateRepository, get_database},
-    default::sign_default_certificates,
+    default::sign_default_certificates, objectid::ObjectId,
 };
 use tokio::sync::RwLock;
 use tracing::{Level, event};
-pub static CERTIFICATES: LazyLock<DashMap<String, Arc<rustls::sign::CertifiedKey>>> =
+pub static FULL_CERTIFICATES: LazyLock<DashMap<String, Arc<rustls::sign::CertifiedKey>>> =
     LazyLock::new(DashMap::default);
+
+pub static CERTIFICATES: LazyLock<DashMap<ObjectId, Arc<rustls::sign::CertifiedKey>>> = 
+    LazyLock::new(DashMap::default);
+
+pub static LAZY_CERTIFICATES: LazyLock<DashMap<String, Arc<rustls::sign::CertifiedKey>>> =
+    LazyLock::new(DashMap::default);
+
 static DEFAULT_CERTIFICATE: LazyLock<Arc<CertifiedKey>> = LazyLock::new(|| {
     let (fullchain, privatekey) = sign_default_certificates().unwrap();
     Arc::new(CertifiedKey::from_der(fullchain, privatekey, &PROVIDER).unwrap())
@@ -60,9 +67,13 @@ pub async fn sync_certificates() -> anyhow::Result<()> {
         let fullchain = certificate.get_fullchain()?;
         let privatekey = certificate.get_private_key()?;
         let config = Arc::new(CertifiedKey::from_der(fullchain, privatekey, &PROVIDER)?);
-        let domains = certificate.hostnames;
-        for domain in domains {
-            CERTIFICATES.insert(domain.to_lowercase(), config.clone());
+        CERTIFICATES.insert(certificate.id, config.clone());
+        for domain in certificate.hostnames {
+            if domain.contains("*") {
+                LAZY_CERTIFICATES.insert(domain, config.clone());
+            } else {
+                FULL_CERTIFICATES.insert(domain, config.clone());
+            }
         }
         // compare
         if certificate.updated_at > last_sync {
@@ -74,32 +85,29 @@ pub async fn sync_certificates() -> anyhow::Result<()> {
 }
 
 fn lookup_certificate(host: &str) -> Option<Arc<CertifiedKey>> {
-    // 第一次检查：只读缓存
-    {
-        let cache = CACHE_CERTIFICATES.read().unwrap();
-        if let Some(cert) = cache.get(host) {
-            return Some(cert.clone());
-        }
-    } // 读锁在此处释放
+    let host = host.to_lowercase();
 
-    // 精确匹配：从 CERTIFICATES 中查找
-    if let Some(cert) = CERTIFICATES.get(host) {
-        // 第二次检查（带写锁）
-        let mut cache = CACHE_CERTIFICATES.write().unwrap();
-        if !cache.contains_key(host) {
-            cache.insert(host.to_string(), cert.clone(), **CACHE_CERTIFICATES_EXPIRE);
-        }
+    // 1. 检查缓存
+    if let Some(cached) = CACHE_CERTIFICATES.read().unwrap().get(&host) {
+        return Some(cached.clone());
+    }
+
+    // 2. 精确匹配
+    if let Some(cert) = FULL_CERTIFICATES.get(&host) {
+        insert_cache(&host, cert.clone());
         return Some(cert.clone());
     }
 
-    // 通配符匹配：遍历 CERTIFICATES 的快照
-    for (domain, cert) in CERTIFICATES.clone() {
-        // 处理 "*" 通配符
-        if domain == "*" || regex_match(host, &domain) {
-            let mut cache = CACHE_CERTIFICATES.write().unwrap();
-            if !cache.contains_key(host) {
-                cache.insert(host.to_string(), cert.clone(), **CACHE_CERTIFICATES_EXPIRE);
-            }
+    // 3. 通配符匹配：按模式长度降序（更具体的优先）
+    let mut candidates: Vec<_> = LAZY_CERTIFICATES
+        .iter()
+        .map(|entry| (entry.key().clone(), entry.value().clone()))
+        .collect();
+    candidates.sort_by(|(a, _), (b, _)| b.len().cmp(&a.len()));
+
+    for (pattern, cert) in candidates {
+        if regex_match(&host, &pattern) {
+            insert_cache(&host, cert.clone());
             return Some(cert.clone());
         }
     }
@@ -107,7 +115,13 @@ fn lookup_certificate(host: &str) -> Option<Arc<CertifiedKey>> {
     None
 }
 
-// 辅助函数：将域名模式转换为正则表达式并匹配
+fn insert_cache(host: &str, cert: Arc<CertifiedKey>) {
+    let mut cache = CACHE_CERTIFICATES.write().unwrap();
+    if !cache.contains_key(host) {
+        cache.insert(host.to_string(), cert, **CACHE_CERTIFICATES_EXPIRE);
+    }
+}
+
 fn regex_match(host: &str, pattern: &str) -> bool {
     let pattern = pattern.replace('.', "\\.").replace('*', r"[-\w]+");
     let re = Regex::new(&format!("^{pattern}$")).unwrap();
