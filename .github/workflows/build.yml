@@ -41,6 +41,7 @@ jobs:
       - name: Prepare release
         shell: bash
         run: |
+          # ls ./builds
           # cp ./builds/gateway ./gateway/gateway
           # cp ./builds/dashboard ./dashboard/backend/dashboard
           # cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
