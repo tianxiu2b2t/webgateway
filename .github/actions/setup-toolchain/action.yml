@@ -19,7 +19,7 @@ inputs:
   node-version: # 新增：Node.js 版本输入
     description: "Node.js version to use"
     required: false
-    default: 20 # 默认使用 Node.js 20 LTS
+    default: 24 # 默认使用 Node.js 20 LTS
 
 runs:
   using: "composite"
