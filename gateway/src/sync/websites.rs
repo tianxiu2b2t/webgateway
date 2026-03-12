@@ -32,9 +32,12 @@ pub async fn sync_websites() -> anyhow::Result<Vec<u16>> {
         ports.extend(&site.inner().ports);
         WEBSITES.insert(site.inner().id, site.clone());
         for domain in &site.inner().hosts {
+            let domain = domain.to_lowercase();
             if domain.contains("*") {
+                event!(Level::DEBUG, "Insert website: {domain} to lazy websites {}", site.inner().id);
                 LAZY_WEBSITES.insert(domain.to_owned(), site.clone());
             } else {
+                event!(Level::DEBUG, "Insert website: {domain} to full websites {}", site.inner().id);
                 FULL_WEBSITES.insert(domain.to_owned(), site.clone());
             }
         }

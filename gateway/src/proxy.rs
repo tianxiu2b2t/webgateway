@@ -110,6 +110,7 @@ pub async fn handle(
     }).unwrap_or_else(|| {
         req.uri().host().map(|v| v.to_string()).unwrap_or_default()
     });
+    event!(Level::INFO, "Request from {} to {}", base_state.remote_addr, host);
     let site = match get_website(&host)
         .await {
         Some(v) => v,
@@ -118,6 +119,7 @@ pub async fn handle(
             return Ok(resp);
         }
     };
+    event!(Level::INFO, "Request to {:?}", site.inner().hosts);
     let state = ClientState {
         base: base_state,
         website: site.clone(),
