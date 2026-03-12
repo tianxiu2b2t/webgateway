@@ -16,8 +16,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/build-frontend
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
 
       - name: Build And Push Rust Application
         uses: ./.github/actions/build-rust
@@ -30,8 +33,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/build-frontend
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
 
       - name: Build Frontend
         uses: ./.github/actions/build-frontend
