@@ -5,6 +5,6 @@ ADD run/* /opt/webgateway
 
 RUN apk add --no-cache gettext && chmod +x entrypoint.sh
 
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["./opt/webgateway/entrypoint.sh"]
 
 CMD ["nginx", "-g", "daemon off;"]
