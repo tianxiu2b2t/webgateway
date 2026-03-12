@@ -33,17 +33,9 @@ jobs:
       - name: Build Frontend
         uses: ./.github/actions/build-frontend
 
-      - name: Build release
-        uses: ./.github/actions/build
-        with:
-          release: true
-
-      - name: Prepare release
+      - name: List files
         shell: bash
-        run: |
-          cp ./builds/gateway ./gateway/gateway
-          cp ./builds/dashboard ./dashboard/backend/dashboard
-          cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
+        run: cd dashboard/frontend/ && ls -alhR
 
       - name: Build frontend dashboard and push Docker image
         uses: docker/build-push-action@v5
@@ -56,6 +48,18 @@ jobs:
             ghcr.io/${{ github.repository }}/dashboard-frontend:${{ env.RELEASE_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build release
+        uses: ./.github/actions/build
+        with:
+          release: true
+
+      - name: Prepare release
+        shell: bash
+        run: |
+          cp ./builds/gateway ./gateway/gateway
+          cp ./builds/dashboard ./dashboard/backend/dashboard
+          cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
 
       - name: Build gateway and push Docker image
         uses: docker/build-push-action@v5

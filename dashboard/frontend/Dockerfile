@@ -2,7 +2,7 @@ FROM nginx:alpine
 
 RUN apk add --no-cache gettext
 
-ADD dist /usr/share/nginx/html
+ADD dist/* /usr/share/nginx/html
 
 ADD default.conf.template /etc/nginx/templates/
 ADD entrypoint.sh /entrypoint.sh
