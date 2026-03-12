@@ -1,0 +1,45 @@
+name: "Build Rust Application"
+description: "Build Rust Application for release or debug"
+inputs:
+  release:
+    description: "Build in release mode (default: false)"
+    required: false
+    default: "false"
+  rust-version:
+    description: "Rust toolchain version (e.g., stable, nightly, 1.70.0)"
+    required: false
+    default: "stable"
+
+  github_actor:
+    description: "GitHub actor"
+    required: false
+    default: ${{ github.actor }}
+
+  github_token:
+    description: "GitHub token"
+    required: false
+    default: ${{ secrets.GITHUB_TOKEN }}
+
+  node-version: # 新增：Node.js 版本输入
+    description: "Node.js version to use"
+    required: false
+    default: 20 # 默认使用 Node.js 20 LTS
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Environment Setup
+      shell: bash
+      run: |
+        echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+    - name: Setup toolchains
+      uses: ./.github/actions/setup-toolchain
+      with:
+        rust-version: ${{ inputs.rust-version }}
+        node-version: ${{ inputs.node-version }}
+        github_actor: ${{ inputs.github_actor }}
+        github_token: ${{ inputs.github_token }}

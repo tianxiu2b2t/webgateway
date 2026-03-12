@@ -20,3 +20,24 @@ runs:
       with:
         name: webgateway-dashboard-frontend
         path: dashboard/frontend/dist/*
+
+    - name: Prepare frontend
+      shell: bash
+      run: |
+        mkdir ./dashboard/frontend/run/dist
+        ls ./dashboard/frontend/dist
+
+        cp -r ./dashboard/frontend/dist/* ./dashboard/frontend/run/dist/
+        ls ./dashboard/frontend/run/dist
+
+    - name: Build frontend dashboard and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./dashboard/frontend
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}/dashboard-frontend:latest
+          ghcr.io/${{ github.repository }}/dashboard-frontend:${{ github.sha }}
+          ghcr.io/${{ github.repository }}/dashboard-frontend:${{ env.RELEASE_VERSION }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
