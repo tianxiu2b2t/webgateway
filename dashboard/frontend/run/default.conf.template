@@ -1,7 +1,8 @@
 server {
     listen 80;
+    listen 4173;
     server_name localhost;
-    root /usr/share/nginx/html;
+    root /opt/webgateway/dist;
     index index.html;
 
     location / {
