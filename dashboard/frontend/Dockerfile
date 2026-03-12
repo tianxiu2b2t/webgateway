@@ -1,13 +1,9 @@
 FROM nginx:alpine
 
-RUN apk add --no-cache gettext
+WORKDIR /opt/webgateway
+ADD run/* /opt/webgateway
 
-ADD dist/* /usr/share/nginx/html
-
-ADD default.conf.template /etc/nginx/templates/
-ADD entrypoint.sh /entrypoint.sh
-
-RUN chmod +x /entrypoint.sh
+RUN apk add --no-cache gettext && chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 

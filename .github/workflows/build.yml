@@ -45,6 +45,10 @@ jobs:
           cp ./builds/dashboard ./dashboard/backend/dashboard
           cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
 
+          mkdir ./dashboard/frontend/run/dist
+
+          cp ./dashboard/frontend/dist/* ./dashboard/frontend/run/dist/
+
       - name: Build gateway and push Docker image
         uses: docker/build-push-action@v5
         with:
