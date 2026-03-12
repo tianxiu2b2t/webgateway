@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup environment
-        uses: ./.github/actions/build-frontend
+        uses: ./.github/actions/setup-environment
         with:
           github_token: ${{ secrets.GH_TOKEN }}
 
@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup environment
-        uses: ./.github/actions/build-frontend
+        uses: ./.github/actions/setup-environment
         with:
           github_token: ${{ secrets.GH_TOKEN }}
 
