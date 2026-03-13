@@ -6,7 +6,7 @@ use axum::{
 };
 use shared::{
     database::{
-        dnsprovider::{DatabaseDNSProviderQuery, DatabaseDNSProviderSet},
+        dnsprovider::{DatabaseDNSProviderRepository, DatabaseDNSProviderModifyRepository},
         get_database,
     },
     models::dnsprovider::{CreateDatabaseDNSProvider, DNSProviderQueryParams, DatabaseDNSProvider},

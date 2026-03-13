@@ -53,15 +53,17 @@ pub trait DatabaseCertificateRepository {
         before: &chrono::DateTime<chrono::Utc>,
     ) -> Result<Vec<DatabaseCertificate>>;
     async fn get_will_sign_certificates(&self) -> Result<Vec<NeedSignCertificate>>;
-
-    async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()>;
     async fn get_total_of_certificates(&self) -> Result<usize>;
     async fn get_certificates_by_page(
         &self,
         page: usize,
         limit: usize,
     ) -> Result<Vec<DatabaseCertificate>>;
+}
 
+#[async_trait]
+pub trait DatabaseCertificateModifiyRepository {
+    async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()>;
     async fn create_certificate(&self, cert: &CreateCertificate) -> Result<DatabaseCertificate>;
 }
 
@@ -99,19 +101,6 @@ impl DatabaseCertificateRepository for Database {
         Ok(certs)
     }
 
-    async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()> {
-        sqlx::query(
-            "UPDATE certificates SET fullchain = $1, private_key = $2, expires_at = $3, updated_at = NOW() WHERE id = $4",
-        )
-        .bind(&cert.fullchain)
-        .bind(&cert.private_key)
-        .bind(cert.expires_at()?)
-        .bind(cert.id)
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
-
     async fn get_total_of_certificates(&self) -> Result<usize> {
         let count: i64 = sqlx::query_scalar("SELECT COUNT(id) FROM certificates")
             .fetch_one(&self.pool)
@@ -134,7 +123,23 @@ impl DatabaseCertificateRepository for Database {
         .await?;
         Ok(certificates)
     }
+}
 
+#[async_trait]
+impl DatabaseCertificateModifiyRepository for Database {
+        async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()> {
+        sqlx::query(
+            "UPDATE certificates SET fullchain = $1, private_key = $2, expires_at = $3, updated_at = NOW() WHERE id = $4",
+        )
+        .bind(&cert.fullchain)
+        .bind(&cert.private_key)
+        .bind(cert.expires_at()?)
+        .bind(cert.id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+    
     async fn create_certificate(&self, cert: &CreateCertificate) -> Result<DatabaseCertificate> {
         let res = match &cert.content {
             CreateCertificateMethod::AUTO(context) => {

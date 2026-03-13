@@ -36,7 +36,7 @@ impl DatabaseDNSProviderInitializer for Database {
 }
 
 #[async_trait]
-pub trait DatabaseDNSProviderQuery {
+pub trait DatabaseDNSProviderRepository {
     async fn get_dns_providers(&self) -> Result<Vec<DatabaseDNSProvider>>;
     async fn get_dns_provider_by_id(&self, id: &ObjectId) -> Result<DatabaseDNSProvider>;
     async fn get_total_of_dns_providers(&self) -> Result<usize>;
@@ -48,7 +48,7 @@ pub trait DatabaseDNSProviderQuery {
 }
 
 #[async_trait]
-impl DatabaseDNSProviderQuery for Database {
+impl DatabaseDNSProviderRepository for Database {
     async fn get_dns_providers(&self) -> Result<Vec<DatabaseDNSProvider>> {
         let rows = sqlx::query_as::<_, DatabaseDNSProvider>(
             r#"
@@ -96,7 +96,7 @@ impl DatabaseDNSProviderQuery for Database {
 }
 
 #[async_trait]
-pub trait DatabaseDNSProviderSet {
+pub trait DatabaseDNSProviderModifyRepository {
     async fn create_dns_provider(
         &self,
         dnsprovider: &CreateDatabaseDNSProvider,
@@ -104,7 +104,7 @@ pub trait DatabaseDNSProviderSet {
 }
 
 #[async_trait]
-impl DatabaseDNSProviderSet for Database {
+impl DatabaseDNSProviderModifyRepository for Database {
     async fn create_dns_provider(
         &self,
         dnsprovider: &CreateDatabaseDNSProvider,

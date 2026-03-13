@@ -39,7 +39,7 @@ impl DatabaseWebsiteInitializer for Database {
 }
 
 #[async_trait::async_trait]
-pub trait DatabaseWebsiteQuery {
+pub trait DatabaseWebsiteRepository {
     async fn get_websites(&self) -> anyhow::Result<Vec<DatabaseWebsite>>;
     async fn get_websites_before_updated_at(
         &self,
@@ -49,7 +49,7 @@ pub trait DatabaseWebsiteQuery {
 }
 
 #[async_trait::async_trait]
-impl DatabaseWebsiteQuery for Database {
+impl DatabaseWebsiteRepository for Database {
     async fn get_websites(&self) -> anyhow::Result<Vec<DatabaseWebsite>> {
         let rows = sqlx::query_as::<_, DatabaseWebsite>("SELECT * FROM websites;")
             .fetch_all(&self.pool)
@@ -80,7 +80,7 @@ impl DatabaseWebsiteQuery for Database {
 }
 
 #[async_trait::async_trait]
-pub trait DatabaseWebsiteSet {
+pub trait DatabaseWebsiteModifyRepository {
     async fn create_website(
         &self,
         website: &CreateDatabaseWebsite,
@@ -88,7 +88,7 @@ pub trait DatabaseWebsiteSet {
 }
 
 #[async_trait::async_trait]
-impl DatabaseWebsiteSet for Database {
+impl DatabaseWebsiteModifyRepository for Database {
     async fn create_website(
         &self,
         website: &CreateDatabaseWebsite,

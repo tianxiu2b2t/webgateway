@@ -5,7 +5,7 @@ use axum::{
 use shared::{
     database::{
         get_database,
-        websites::{DatabaseWebsiteQuery, DatabaseWebsiteSet},
+        websites::{DatabaseWebsiteRepository, DatabaseWebsiteModifyRepository},
     },
     models::websites::{CreateDatabaseWebsite, DatabaseWebsite},
 };

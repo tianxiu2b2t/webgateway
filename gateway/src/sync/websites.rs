@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use regex::Regex;
 use shared::{
-    database::{get_database, websites::DatabaseWebsiteQuery},
+    database::{get_database, websites::DatabaseWebsiteRepository},
     objectid::ObjectId,
 };
 use tokio::sync::RwLock;

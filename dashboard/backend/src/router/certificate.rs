@@ -5,7 +5,7 @@ use axum::{
     routing::{get, post},
 };
 use shared::{
-    database::{certificate::DatabaseCertificateRepository, get_database},
+    database::{certificate::{DatabaseCertificateRepository, DatabaseCertificateModifiyRepository}, get_database},
     models::certificate::{
         CertificateQueryParams, CreateCertificate, CreateCertificateMethod, DatabaseCertificate,
     },
