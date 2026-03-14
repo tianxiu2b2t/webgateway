@@ -4,7 +4,6 @@ import Panel from '../../components/Panel.vue';
 import Switchbar from '../../components/Switchbar.vue';
 import { pushQuery } from '../../constant';
 import { computed } from 'vue';
-import Log from './settings/Log.vue';
 import Metrics from './statistics/metrics.vue';
 const options = [
     {
