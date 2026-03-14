@@ -5,23 +5,21 @@ use std::{
 };
 
 use dashmap::DashMap;
-use hyper::{Request, Response, Version, body::Incoming, client, service::service_fn};
+use http_body::Body;
+use hyper::{Request, Response, StatusCode, Version, body::Incoming, client, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server::conn::auto::Builder,
 };
 use shared::{
-    listener::CustomDualStackTcpListener,
-    streams::{BufferStream, WrapperBufferStream},
+    listener::CustomDualStackTcpListener, objectid::ObjectId, streams::{BufferStream, WrapperBufferStream}
 };
 use tokio::{net::TcpStream, task::JoinHandle, time::timeout};
 use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
 use crate::{
-    response::CResponse,
-    state::{BaseClientState, ClientState},
-    sync::{SERVER_CONFIG, websites::get_website},
+    access::{self, RequestContext, RequestLog}, response::{CResponse, CResponseResult}, state::{BaseClientState, ClientState}, sync::{SERVER_CONFIG, websites::get_website}
 };
 pub mod backends;
 pub mod protocols;
@@ -109,24 +107,66 @@ pub async fn handle(
         .get("host")
         .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
         .unwrap_or_else(|| req.uri().host().map(|v| v.to_string()).unwrap_or_default());
-    // let host = base_state.tls.clone().map(|v| {
-    //     println!("{:?}", &v.hostname);
-    //     v.hostname
-    // }).unwrap_or_else(|| {
-    //     let r = req.headers()
-    //         .get("host")
-    //         .and_then(|v| v.to_str().ok().map(|v| v.to_string()));
-    //     println!("Host: {:?}", r);
-    //     r
-    // })
+
+    let req_id = ObjectId::new();
+    access::add_request_log(
+        &match RequestLog::new(RequestContext {
+            req_id,
+            host: host.clone(),
+            uri: req.uri().clone(),
+            headers: req.headers().clone(),
+            method: req.method().clone(),
+            version: req.version(),
+            body_length: req.size_hint(),
+            remote_addr: base_state.remote_addr.to_string(),
+        }) {
+            Ok(v) => v,
+            Err(_) => {
+                return Ok(Response::builder()
+                        .status(StatusCode::BAD_REQUEST)
+                        .body(CResponse::new_from_string("Bad Request"))
+                        .unwrap()
+                    )
+            }
+        }
+    );
+
+    let resp = wrapper_inner_handle(req, base_state, host, &req_id).await;
+
+    let final_resp = match resp {
+        CResponseResult::NotFoundGateway => {
+            Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(CResponse::new_from_string("Not Found"))
+                .unwrap()
+        }
+        CResponseResult::GatewayError(e) => {
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(CResponse::new_from_string(e.to_string()))
+                .unwrap()
+        },
+        CResponseResult::Timeout => {
+            Response::builder()
+                .status(StatusCode::REQUEST_TIMEOUT)
+                .body(CResponse::new_from_string("Request Timeout"))
+                .unwrap()
+        },
+        CResponseResult::Backend(resp) => resp,
+    };
+    Ok(final_resp)
+}
+
+async fn wrapper_inner_handle(
+    req: Request<Incoming>,
+    base_state: Arc<BaseClientState>,
+    host: String,
+    _: &ObjectId
+) -> CResponseResult {
     let site = match get_website(&host).await {
         Some(v) => v,
         None => {
-            let resp = Response::builder()
-                .status(404)
-                .header("Server", "WebGateway")
-                .body(CResponse::new_from_string("Not Found Gateway"))?;
-            return Ok(resp);
+            return CResponseResult::NotFoundGateway;
         }
     };
     let state = ClientState {
@@ -137,22 +177,13 @@ pub async fn handle(
     let resp = timeout(Duration::from_secs(60), inner_handle(req, state)).await;
     match resp {
         Ok(v) => match v {
-            Ok(v) => Ok(v),
+            Ok(v) => CResponseResult::Backend(v),
             Err(e) => {
-                eprintln!("Error handling request: {}", e);
-                let resp = Response::builder()
-                    .status(502)
-                    .header("Server", "WebGateway")
-                    .body(CResponse::new_from_string("Bad Gateway"))?;
-                Ok(resp)
+                CResponseResult::GatewayError(e)
             }
         },
         Err(_) => {
-            let resp = Response::builder()
-                .status(522)
-                .header("Server", "WebGateway")
-                .body(CResponse::new_from_string("Timeout"))?;
-            Ok(resp)
+            CResponseResult::Timeout
         }
     }
 }

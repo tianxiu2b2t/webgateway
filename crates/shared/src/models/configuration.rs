@@ -1,42 +1,43 @@
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use simple_shared::objectid::ObjectId;
 use sqlx::{FromRow, Row, postgres::PgRow, types::Json};
 
 #[derive(Debug, Clone)]
 pub struct Configuration<T>
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
 {
-    id: ObjectId,
     key: String,
     value: Json<ConfigurationHelper<T>>,
 }
 
+unsafe impl<T> Sync for Configuration<T> where T: Serialize + DeserializeOwned + Clone {}
+unsafe impl<T> Send for Configuration<T> where T: Serialize + DeserializeOwned + Clone {}
+impl<T> Unpin for Configuration<T> where T: Serialize + DeserializeOwned + Clone {}
+
 impl<T> Configuration<T> where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
  {
-    fn inner_new(id: ObjectId, key: impl Into<String>, value: T) -> Self {
+    pub fn new(key: impl Into<String>, value: T) -> Self {
         Self {
-            id,
             key: key.into(),
             value: Json(ConfigurationHelper { data: value }),
         }
-    }
-
-    pub fn new(key: impl Into<String>, value: T) -> Self {
-        Self::inner_new(ObjectId::new(), key, value)
     }
 
     pub fn value(&self) -> &T {
         &self.value.data
     }
 
-    pub fn key(&self) -> &str {
-        &self.key
+    pub fn into_value(self) -> T {
+        self.value.data.clone()
     }
 
-    pub fn id(&self) -> &ObjectId {
-        &self.id
+    pub(crate) fn get_helper_value(&self) -> &ConfigurationHelper<T> {
+        &self.value.0
+    }
+
+    pub fn key(&self) -> &str {
+        &self.key
     }
 
     pub fn set_value(&mut self, value: T) {
@@ -49,9 +50,9 @@ impl<T> Configuration<T> where
 }
 
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(bound = "T: Serialize + DeserializeOwned")]
-struct ConfigurationHelper<T>
+pub(crate) struct ConfigurationHelper<T>
 where
     T: Serialize + DeserializeOwned,
 {
@@ -61,11 +62,10 @@ where
 
 impl<'r, T> FromRow<'r, PgRow> for Configuration<T>
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
 {
     fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
-            id: row.try_get("id")?,
             key: row.try_get("key")?,
             value: row.try_get::<Json<ConfigurationHelper<T>>, _>("value")?,
         })
