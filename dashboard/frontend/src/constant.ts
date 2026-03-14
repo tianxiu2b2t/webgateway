@@ -73,6 +73,10 @@ export const router = createRouter({
             },
             children: [
                 {
+                    path: 'statistics',
+                    component: () => import('./pages/Dashboard/Statistics.vue'),
+                },
+                {
                     path: 'settings',
                     component: () => import('./pages/Dashboard/Settings.vue'),
                 },
