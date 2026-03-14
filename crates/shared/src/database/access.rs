@@ -40,12 +40,12 @@ impl DatabaseAccessLogsInitializer for Database {
                 backend_response_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             "#,
-            "CREATE INDEX idx_requested_at ON access_request_logs (requested_at);",
+            "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
             r#"CREATE OR REPLACE VIEW qps_per_second AS
                 SELECT
                     date_trunc('second', requested_at) AS second,
                     COUNT(*) AS total_requests,
-                    COUNT(*) AS qps  -- 每秒请求数，即该秒内的总请求数
+                    COUNT(*) AS qps  
                 FROM access_request_logs
                 GROUP BY second
                 ORDER BY second DESC;
@@ -53,11 +53,40 @@ impl DatabaseAccessLogsInitializer for Database {
             r#"CREATE OR REPLACE VIEW qps_per_5s AS
                 SELECT
                     to_timestamp(floor(extract(epoch from requested_at) / 5) * 5) AS window_start,
-                    COUNT(*) AS total_requests,                -- 5 秒窗口内的总请求数
-                    COUNT(*) / 5.0 AS avg_qps                   -- 平均每秒请求数
+                    COUNT(*) AS total_requests,                
+                    COUNT(*) / 5.0 AS avg_qps                   
                 FROM access_request_logs
                 GROUP BY window_start
                 ORDER BY window_start DESC;
+            "#,
+            // 加速根据 host 统计 qps
+            "CREATE INDEX IF NOT EXISTS idx_access_request_logs_host_requested_at ON access_request_logs (host, requested_at);",
+            "CREATE INDEX IF NOT EXISTS idx_access_response_logs_status ON access_response_logs (status);",
+            // 视图
+            r#"
+            CREATE OR REPLACE VIEW qps_per_second_by_host_status AS
+            SELECT 
+                date_trunc('second', req.requested_at) AS second,
+                req.host,
+                resp.status,
+                COUNT(*) AS requests_per_second
+            FROM access_request_logs req
+            JOIN access_response_logs resp ON req.id = resp.id
+            GROUP BY second, req.host, resp.status
+            ORDER BY second DESC, req.host, resp.status;
+            "#,
+            r#"
+            CREATE OR REPLACE VIEW qps_per_5s_by_host_status AS
+            SELECT 
+                to_timestamp(floor(extract(epoch from req.requested_at) / 5) * 5) AS window_start,
+                req.host,
+                resp.status,
+                COUNT(*) AS total_requests,
+                COUNT(*) / 5.0 AS avg_qps
+            FROM access_request_logs req
+            JOIN access_response_logs resp ON req.id = resp.id
+            GROUP BY window_start, req.host, resp.status
+            ORDER BY window_start DESC, req.host, resp.status;
             "#,
         ] {
             sqlx::query(sql).execute(&self.pool).await?;
