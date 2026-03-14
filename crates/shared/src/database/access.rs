@@ -36,7 +36,7 @@ impl DatabaseAccessLogsInitializer for Database {
                 http_version        TEXT NOT NULL,
                 created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 responsed_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                backend_responsed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                backend_responsed_at TIMESTAMPTZ DEFAULT NOW()
             )
             "#,
             "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
