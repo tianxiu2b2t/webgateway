@@ -14,9 +14,10 @@ unsafe impl<T> Sync for Configuration<T> where T: Serialize + DeserializeOwned +
 unsafe impl<T> Send for Configuration<T> where T: Serialize + DeserializeOwned + Clone {}
 impl<T> Unpin for Configuration<T> where T: Serialize + DeserializeOwned + Clone {}
 
-impl<T> Configuration<T> where
+impl<T> Configuration<T>
+where
     T: Serialize + DeserializeOwned + Clone,
- {
+{
     pub fn new(key: impl Into<String>, value: T) -> Self {
         Self {
             key: key.into(),
@@ -49,7 +50,6 @@ impl<T> Configuration<T> where
     }
 }
 
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(bound = "T: Serialize + DeserializeOwned")]
 pub(crate) struct ConfigurationHelper<T>
@@ -58,7 +58,6 @@ where
 {
     data: T,
 }
-
 
 impl<'r, T> FromRow<'r, PgRow> for Configuration<T>
 where

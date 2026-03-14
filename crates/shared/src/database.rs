@@ -3,22 +3,25 @@ use std::sync::{LazyLock, OnceLock, RwLock};
 use chrono::{DateTime, TimeDelta, Utc};
 use futures::{Stream, StreamExt};
 use sqlx::{
-    Pool, Postgres, Row, postgres::{PgListener, PgNotification, PgPoolOptions}
+    Pool, Postgres, Row,
+    postgres::{PgListener, PgNotification, PgPoolOptions},
 };
 use tracing::event;
 
 use crate::database::{
-    access::DatabaseAccessLogsInitializer, certificate::DatabaseCertificateInitializer, dnsprovider::DatabaseDNSProviderInitializer, websites::DatabaseWebsiteInitializer
+    access::DatabaseAccessLogsInitializer, certificate::DatabaseCertificateInitializer,
+    dnsprovider::DatabaseDNSProviderInitializer, websites::DatabaseWebsiteInitializer,
 };
 
+pub mod access;
 pub mod certificate;
+pub mod configuration;
 pub mod dnsprovider;
 pub mod websites;
-pub mod access;
-pub mod configuration;
 
 static PG_EXTENSION: &[&str; 2] = &["uint128", "btree_gin"];
-static DATABASE_OFFSET_TIME: LazyLock<RwLock<TimeDelta>> = LazyLock::new(|| RwLock::new(TimeDelta::zero()));
+static DATABASE_OFFSET_TIME: LazyLock<RwLock<TimeDelta>> =
+    LazyLock::new(|| RwLock::new(TimeDelta::zero()));
 
 #[derive(Debug)]
 pub struct Database {
@@ -160,12 +163,17 @@ impl Database {
 
     #[inline]
     pub fn get_database_time(&self) -> anyhow::Result<DateTime<Utc>> {
-        Ok(Utc::now() + *(DATABASE_OFFSET_TIME.read().map_err(|e| anyhow::anyhow!(format!("{e}")))?))
+        Ok(Utc::now()
+            + *(DATABASE_OFFSET_TIME
+                .read()
+                .map_err(|e| anyhow::anyhow!(format!("{e}")))?))
     }
 
     #[inline]
     pub async fn get_real_database_time(&self) -> anyhow::Result<DateTime<Utc>> {
-        let r = sqlx::query("SELECT NOW() as current_time;").fetch_one(&self.pool).await?;
+        let r = sqlx::query("SELECT NOW() as current_time;")
+            .fetch_one(&self.pool)
+            .await?;
         Ok(r.try_get::<DateTime<Utc>, _>("current_time")?)
     }
 }
@@ -176,12 +184,16 @@ pub static DATABASE: OnceLock<Database> = OnceLock::new();
 pub async fn init_database(url: &str, max_connections: u32) -> anyhow::Result<()> {
     let database = Database::new(url, max_connections).await?;
     DATABASE.set(database).unwrap();
-    
+
     tokio::spawn(async move {
         loop {
             let r = inner_sync_offset_time().await;
             if let Err(e) = r {
-                event!(tracing::Level::ERROR, "Failed to sync database time: {:?}", e);
+                event!(
+                    tracing::Level::ERROR,
+                    "Failed to sync database time: {:?}",
+                    e
+                );
             }
             // for _ in 0..10 {
             //     let db_time = get_database().get_database_time().unwrap();
@@ -203,18 +215,28 @@ pub async fn init_database(url: &str, max_connections: u32) -> anyhow::Result<()
 #[inline]
 async fn inner_sync_offset_time() -> anyhow::Result<()> {
     let req_current_time = Utc::now();
-    let r = sqlx::query("SELECT NOW() as current_time;").fetch_one(&get_database().pool).await?;
+    let r = sqlx::query("SELECT NOW() as current_time;")
+        .fetch_one(&get_database().pool)
+        .await?;
     let resp_current_time = Utc::now();
     let db_time = r.try_get::<DateTime<Utc>, _>("current_time")?;
-    let offset = {
-        (db_time - req_current_time) + (db_time - resp_current_time)
-    } / 2;
-    let mut write = DATABASE_OFFSET_TIME.write().map_err(|e| anyhow::anyhow!(format!("{e}")))?;
+    let offset = { (db_time - req_current_time) + (db_time - resp_current_time) } / 2;
+    let mut write = DATABASE_OFFSET_TIME
+        .write()
+        .map_err(|e| anyhow::anyhow!(format!("{e}")))?;
     if write.is_zero() {
-        event!(tracing::Level::INFO, "Database time offset is zero, set to {:?}", offset);
+        event!(
+            tracing::Level::INFO,
+            "Database time offset is zero, set to {:?}",
+            offset
+        );
     }
     *write = offset;
-    event!(tracing::Level::DEBUG, "Database time offset set to {:?}", offset);
+    event!(
+        tracing::Level::DEBUG,
+        "Database time offset set to {:?}",
+        offset
+    );
     event!(tracing::Level::DEBUG, "Sync database time is {}", db_time);
     event!(tracing::Level::DEBUG, "Sync time is {}", resp_current_time);
     Ok(())

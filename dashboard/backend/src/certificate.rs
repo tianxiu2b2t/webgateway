@@ -6,7 +6,8 @@ use std::{
 use acmex::{AcmeConfig, ChallengeSolverRegistry, Contact, Dns01Solver, DnsProvider};
 use shared::{
     database::{
-        certificate::{DatabaseCertificateModifiyRepository, DatabaseCertificateRepository}, dnsprovider::DatabaseDNSProviderRepository,
+        certificate::{DatabaseCertificateModifiyRepository, DatabaseCertificateRepository},
+        dnsprovider::DatabaseDNSProviderRepository,
         get_database,
     },
     models::certificate::{NeedSignCertificate, UpdateCertificate},

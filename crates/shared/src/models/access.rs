@@ -144,7 +144,9 @@ impl<'r> FromRow<'r, PgRow> for AccessResponse {
             headers: row.try_get::<Json<Vec<_>>, _>("headers")?.0,
             created_at: row.try_get("created_at")?,
             responsed_at: row.try_get("responsed_at")?,
-            body_length: row.try_get::<Option<USize>, _>("body_length")?.map(|v| v.into()),
+            body_length: row
+                .try_get::<Option<USize>, _>("body_length")?
+                .map(|v| v.into()),
             http_version: row.try_get::<Text<AccessVersion>, _>("http_version")?.0,
             backend_request_at: row.try_get("backend_request_at")?,
             backend_response_at: row.try_get("backend_response_at")?,

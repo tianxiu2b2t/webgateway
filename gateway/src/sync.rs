@@ -39,8 +39,7 @@ pub async fn main() -> anyhow::Result<()> {
 
     tokio::spawn(async move {
         match get_database()
-            .listen_service_fn("websites", async |_| 
-            {
+            .listen_service_fn("websites", async |_| {
                 event!(Level::INFO, "Recvied notification, syncing websites");
                 match sync_websites().await {
                     Ok(ports) => {
@@ -54,9 +53,10 @@ pub async fn main() -> anyhow::Result<()> {
                     Err(e) => {
                         event!(Level::ERROR, "Failed to sync websites: {e}");
                     }
-                }})
-                .await
-            {
+                }
+            })
+            .await
+        {
             Ok(()) => {}
             Err(e) => event!(Level::ERROR, "Failed to listen websites: {e}"),
         };

@@ -127,7 +127,7 @@ impl DatabaseCertificateRepository for Database {
 
 #[async_trait]
 impl DatabaseCertificateModifiyRepository for Database {
-        async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()> {
+    async fn update_certificate(&self, cert: &UpdateCertificate) -> Result<()> {
         sqlx::query(
             "UPDATE certificates SET fullchain = $1, private_key = $2, expires_at = $3, updated_at = NOW() WHERE id = $4",
         )
@@ -139,7 +139,7 @@ impl DatabaseCertificateModifiyRepository for Database {
         .await?;
         Ok(())
     }
-    
+
     async fn create_certificate(&self, cert: &CreateCertificate) -> Result<DatabaseCertificate> {
         let res = match &cert.content {
             CreateCertificateMethod::AUTO(context) => {

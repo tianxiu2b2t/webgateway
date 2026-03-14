@@ -7,7 +7,10 @@ use anyhow::Error;
 use bytes::Bytes;
 use http_body::Frame;
 use http_body_util::Full;
-use hyper::{Response, body::{Body, Incoming}};
+use hyper::{
+    Response,
+    body::{Body, Incoming},
+};
 
 // 创建一个统一的 body 类型
 pub enum CResponse {

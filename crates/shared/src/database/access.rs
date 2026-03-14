@@ -1,7 +1,10 @@
+use crate::{
+    database::Database,
+    models::access::{AccessCreateRequest, AccessCreateResponse},
+};
 use async_trait::async_trait;
 use sqlx::{QueryBuilder, types::Json};
 use sqlx_pg_ext_uint::{c_u16::U16, c_usize::USize};
-use crate::{database::Database, models::access::{AccessCreateRequest, AccessCreateResponse}};
 
 #[async_trait]
 pub trait DatabaseAccessLogsInitializer {
@@ -55,9 +58,9 @@ impl DatabaseAccessLogsInitializer for Database {
                 FROM access_request_logs
                 GROUP BY window_start
                 ORDER BY window_start DESC;
-            "#
-            ] {
-                sqlx::query(sql).execute(&self.pool).await?;
+            "#,
+        ] {
+            sqlx::query(sql).execute(&self.pool).await?;
         }
 
         Ok(())
@@ -73,20 +76,30 @@ impl DatabaseAccessLogsRepository for Database {}
 
 #[async_trait]
 pub trait DatabaseAccessLogsModifyRepository {
-    async fn insert_batch_access_requests(&self, requests: Vec<AccessCreateRequest>) -> anyhow::Result<()>;
-    async fn insert_batch_access_responses(&self, responses: Vec<AccessCreateResponse>) -> anyhow::Result<()>;
+    async fn insert_batch_access_requests(
+        &self,
+        requests: Vec<AccessCreateRequest>,
+    ) -> anyhow::Result<()>;
+    async fn insert_batch_access_responses(
+        &self,
+        responses: Vec<AccessCreateResponse>,
+    ) -> anyhow::Result<()>;
 }
 
 #[async_trait]
 impl DatabaseAccessLogsModifyRepository for Database {
-    async fn insert_batch_access_requests(&self, requests: Vec<AccessCreateRequest>) -> anyhow::Result<()> {
+    async fn insert_batch_access_requests(
+        &self,
+        requests: Vec<AccessCreateRequest>,
+    ) -> anyhow::Result<()> {
         if requests.is_empty() {
             return Ok(());
         }
-        let mut builder = QueryBuilder::new("INSERT INTO access_request_logs (id, host, method, path, headers, http_version, remote_addr, body_length, requested_at)");
+        let mut builder = QueryBuilder::new(
+            "INSERT INTO access_request_logs (id, host, method, path, headers, http_version, remote_addr, body_length, requested_at)",
+        );
         builder.push_values(requests.iter(), |mut b, req| {
-            b
-                .push_bind(req.id)
+            b.push_bind(req.id)
                 .push_bind(&req.host)
                 .push_bind(&req.method)
                 .push_bind(&req.path)
@@ -99,14 +112,18 @@ impl DatabaseAccessLogsModifyRepository for Database {
         builder.build().execute(&self.pool).await?;
         Ok(())
     }
-    async fn insert_batch_access_responses(&self, responses: Vec<AccessCreateResponse>) -> anyhow::Result<()> {
+    async fn insert_batch_access_responses(
+        &self,
+        responses: Vec<AccessCreateResponse>,
+    ) -> anyhow::Result<()> {
         if responses.is_empty() {
             return Ok(());
         }
-        let mut builder = QueryBuilder::new("INSERT INTO access_response_logs (id, status, headers, body_length, http_version, backend_request_at, backend_response_at, responsed_at)");
+        let mut builder = QueryBuilder::new(
+            "INSERT INTO access_response_logs (id, status, headers, body_length, http_version, backend_request_at, backend_response_at, responsed_at)",
+        );
         builder.push_values(responses.iter(), |mut b, resp| {
-            b
-                .push_bind(resp.id)
+            b.push_bind(resp.id)
                 .push_bind(U16::from(resp.status))
                 .push_bind(Json(&resp.headers))
                 .push_bind(USize::from(resp.body_length))

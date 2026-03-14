@@ -12,14 +12,19 @@ use hyper_util::{
     server::conn::auto::Builder,
 };
 use shared::{
-    listener::CustomDualStackTcpListener, objectid::ObjectId, streams::{BufferStream, WrapperBufferStream}
+    listener::CustomDualStackTcpListener,
+    objectid::ObjectId,
+    streams::{BufferStream, WrapperBufferStream},
 };
 use tokio::{net::TcpStream, task::JoinHandle, time::timeout};
 use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
 use crate::{
-    access::{self, RequestContext, RequestLog}, response::{CResponse, CResponseResult}, state::{BaseClientState, ClientState}, sync::{SERVER_CONFIG, websites::get_website}
+    access::{self, RequestContext, RequestLog},
+    response::{CResponse, CResponseResult},
+    state::{BaseClientState, ClientState},
+    sync::{SERVER_CONFIG, websites::get_website},
 };
 pub mod backends;
 pub mod protocols;
@@ -109,49 +114,40 @@ pub async fn handle(
         .unwrap_or_else(|| req.uri().host().map(|v| v.to_string()).unwrap_or_default());
 
     let req_id = ObjectId::new();
-    access::add_request_log(
-        &match RequestLog::new(RequestContext {
-            req_id,
-            host: host.clone(),
-            uri: req.uri().clone(),
-            headers: req.headers().clone(),
-            method: req.method().clone(),
-            version: req.version(),
-            body_length: req.size_hint(),
-            remote_addr: base_state.remote_addr.to_string(),
-        }) {
-            Ok(v) => v,
-            Err(_) => {
-                return Ok(Response::builder()
-                        .status(StatusCode::BAD_REQUEST)
-                        .body(CResponse::new_from_string("Bad Request"))
-                        .unwrap()
-                    )
-            }
+    access::add_request_log(&match RequestLog::new(RequestContext {
+        req_id,
+        host: host.clone(),
+        uri: req.uri().clone(),
+        headers: req.headers().clone(),
+        method: req.method().clone(),
+        version: req.version(),
+        body_length: req.size_hint(),
+        remote_addr: base_state.remote_addr.to_string(),
+    }) {
+        Ok(v) => v,
+        Err(_) => {
+            return Ok(Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(CResponse::new_from_string("Bad Request"))
+                .unwrap());
         }
-    );
+    });
 
     let resp = wrapper_inner_handle(req, base_state, host, &req_id).await;
 
     let final_resp = match resp {
-        CResponseResult::NotFoundGateway => {
-            Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(CResponse::new_from_string("Not Found"))
-                .unwrap()
-        }
-        CResponseResult::GatewayError(e) => {
-            Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(CResponse::new_from_string(e.to_string()))
-                .unwrap()
-        },
-        CResponseResult::Timeout => {
-            Response::builder()
-                .status(StatusCode::REQUEST_TIMEOUT)
-                .body(CResponse::new_from_string("Request Timeout"))
-                .unwrap()
-        },
+        CResponseResult::NotFoundGateway => Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(CResponse::new_from_string("Not Found"))
+            .unwrap(),
+        CResponseResult::GatewayError(e) => Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(CResponse::new_from_string(e.to_string()))
+            .unwrap(),
+        CResponseResult::Timeout => Response::builder()
+            .status(StatusCode::REQUEST_TIMEOUT)
+            .body(CResponse::new_from_string("Request Timeout"))
+            .unwrap(),
         CResponseResult::Backend(resp) => resp,
     };
     Ok(final_resp)
@@ -161,7 +157,7 @@ async fn wrapper_inner_handle(
     req: Request<Incoming>,
     base_state: Arc<BaseClientState>,
     host: String,
-    _: &ObjectId
+    _: &ObjectId,
 ) -> CResponseResult {
     let site = match get_website(&host).await {
         Some(v) => v,
@@ -178,13 +174,9 @@ async fn wrapper_inner_handle(
     match resp {
         Ok(v) => match v {
             Ok(v) => CResponseResult::Backend(v),
-            Err(e) => {
-                CResponseResult::GatewayError(e)
-            }
+            Err(e) => CResponseResult::GatewayError(e),
         },
-        Err(_) => {
-            CResponseResult::Timeout
-        }
+        Err(_) => CResponseResult::Timeout,
     }
 }
 
