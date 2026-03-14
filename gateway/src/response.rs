@@ -68,5 +68,11 @@ pub enum CResponseResult {
     Backend(Response<CResponse>),
     NotFoundGateway,
     GatewayError(Error),
+    BadRequest,
     Timeout,
+}
+
+pub enum CFirstResponse {
+    Error,
+    Response(CResponseResult),
 }

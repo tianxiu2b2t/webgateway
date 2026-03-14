@@ -82,17 +82,16 @@ pub struct ResponseLog {
 }
 impl ResponseLog {
     pub fn new(
-        context: RequestContext,
+        id: ObjectId,
         http_version: Version,
         headers: &HeaderMap,
         status: u16,
         body_length: SizeHint,
-        backend_request_at: DateTime<Utc>,
-        backend_response_at: Option<DateTime<Utc>>,
+        backend_responsed_at: Option<DateTime<Utc>>,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             inner: AccessCreateResponse {
-                id: context.req_id,
+                id,
                 status,
                 headers: {
                     let mut converted_headers = vec![];
@@ -114,8 +113,7 @@ impl ResponseLog {
                 },
                 body_length: body_length.lower().try_into().unwrap(),
                 responsed_at: get_database().get_database_time().unwrap(),
-                backend_request_at,
-                backend_response_at,
+                backend_responsed_at,
             },
         })
     }
@@ -224,5 +222,11 @@ async fn sync_access_response_logs() -> anyhow::Result<()> {
 pub fn add_request_log(log: &RequestLog) {
     let current_time = { CURRENT_TIME.read().unwrap().clone() };
     let mut logs = ACCESS_REQUEST_LOGS.entry(current_time).or_default();
+    logs.push(log.inner.clone());
+}
+
+pub fn add_response_log(log: &ResponseLog) {
+    let current_time = { CURRENT_TIME.read().unwrap().clone() };
+    let mut logs = ACCESS_RESPONSE_LOGS.entry(current_time).or_default();
     logs.push(log.inner.clone());
 }

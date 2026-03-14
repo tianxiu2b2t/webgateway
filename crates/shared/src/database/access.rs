@@ -36,8 +36,7 @@ impl DatabaseAccessLogsInitializer for Database {
                 http_version        TEXT NOT NULL,
                 created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 responsed_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                backend_request_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                backend_response_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                backend_responsed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             "#,
             "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
@@ -149,7 +148,7 @@ impl DatabaseAccessLogsModifyRepository for Database {
             return Ok(());
         }
         let mut builder = QueryBuilder::new(
-            "INSERT INTO access_response_logs (id, status, headers, body_length, http_version, backend_request_at, backend_response_at, responsed_at)",
+            "INSERT INTO access_response_logs (id, status, headers, body_length, http_version, backend_response_at, responsed_at)",
         );
         builder.push_values(responses.iter(), |mut b, resp| {
             b.push_bind(resp.id)
@@ -157,8 +156,7 @@ impl DatabaseAccessLogsModifyRepository for Database {
                 .push_bind(Json(&resp.headers))
                 .push_bind(USize::from(resp.body_length))
                 .push_bind(resp.http_version.to_string())
-                .push_bind(resp.backend_request_at)
-                .push_bind(resp.backend_response_at)
+                .push_bind(resp.backend_responsed_at)
                 .push_bind(resp.responsed_at);
         });
         builder.build().execute(&self.pool).await?;

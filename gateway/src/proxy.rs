@@ -12,16 +12,14 @@ use hyper_util::{
     server::conn::auto::Builder,
 };
 use shared::{
-    listener::CustomDualStackTcpListener,
-    objectid::ObjectId,
-    streams::{BufferStream, WrapperBufferStream},
+    database::get_database, listener::CustomDualStackTcpListener, objectid::ObjectId, streams::{BufferStream, WrapperBufferStream}
 };
 use tokio::{net::TcpStream, task::JoinHandle, time::timeout};
 use tokio_rustls::TlsAcceptor;
 use tracing::{Level, event};
 
 use crate::{
-    access::{self, RequestContext, RequestLog},
+    access::{self, RequestContext, RequestLog, ResponseLog},
     response::{CResponse, CResponseResult},
     state::{BaseClientState, ClientState},
     sync::{SERVER_CONFIG, websites::get_website},
@@ -96,7 +94,13 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
             io,
             service_fn(move |req: Request<Incoming>| {
                 let state = state.clone();
-                handle(req, state)
+                let req_id = ObjectId::new();
+                let host = req
+                    .headers()
+                    .get("host")
+                    .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
+                    .unwrap_or_else(|| req.uri().host().map(|v| v.to_string()).unwrap_or_default());
+                handle(req, state, host, req_id)
             }),
         )
         .await;
@@ -106,15 +110,10 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
 pub async fn handle(
     req: Request<Incoming>,
     base_state: Arc<BaseClientState>,
+    host: String,
+    req_id: ObjectId,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
-    let host = req
-        .headers()
-        .get("host")
-        .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
-        .unwrap_or_else(|| req.uri().host().map(|v| v.to_string()).unwrap_or_default());
-
-    let req_id = ObjectId::new();
-    access::add_request_log(&match RequestLog::new(RequestContext {
+    let req_log = RequestLog::new(RequestContext {
         req_id,
         host: host.clone(),
         uri: req.uri().clone(),
@@ -123,17 +122,40 @@ pub async fn handle(
         version: req.version(),
         body_length: req.size_hint(),
         remote_addr: base_state.remote_addr.to_string(),
-    }) {
-        Ok(v) => v,
-        Err(_) => {
-            return Ok(Response::builder()
-                .status(StatusCode::BAD_REQUEST)
-                .body(CResponse::new_from_string("Bad Request"))
-                .unwrap());
-        }
     });
+    let resp = match req_log {
+        Ok(req_log) => {
+            access::add_request_log(&req_log);
+            let site = get_website(&host).await;
+            match site {
+                Some(site) => {
+                    let state = ClientState {
+                        base: base_state,
+                        website: site.clone(),
+                        host,
+                    };
+                    let resp = wrapper_inner_handle(req, state).await;
+                    match resp {
+                        CResponseResult::Backend(resp) => {
+                            access::add_response_log(&ResponseLog::new(req_id, resp.version(), resp.headers(), resp.status().as_u16(), resp.size_hint(), Some(get_database().get_database_time().unwrap())).unwrap());
+                            return Ok(resp);
+                        },
+                        resp => {
+                            resp
+                        }
+                    }
+                },
+                None => {
+                    CResponseResult::NotFoundGateway
+                }
+            }
+        },
+        Err(_) => {
+            CResponseResult::BadRequest
+        }
+    };
 
-    let resp = wrapper_inner_handle(req, base_state, host, &req_id).await;
+    // let resp = wrapper_inner_handle(req, base_state, host, &req_id).await;
 
     let final_resp = match resp {
         CResponseResult::NotFoundGateway => Response::builder()
@@ -148,28 +170,20 @@ pub async fn handle(
             .status(StatusCode::REQUEST_TIMEOUT)
             .body(CResponse::new_from_string("Request Timeout"))
             .unwrap(),
-        CResponseResult::Backend(resp) => resp,
+        CResponseResult::BadRequest => Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(CResponse::new_from_string("Bad Request"))
+            .unwrap(),
+        CResponseResult::Backend(_) => unreachable!(),
     };
+    access::add_response_log(&ResponseLog::new(req_id, final_resp.version(), final_resp.headers(), final_resp.status().as_u16(), final_resp.size_hint(), None).unwrap());
     Ok(final_resp)
 }
 
 async fn wrapper_inner_handle(
     req: Request<Incoming>,
-    base_state: Arc<BaseClientState>,
-    host: String,
-    _: &ObjectId,
+    state: ClientState,
 ) -> CResponseResult {
-    let site = match get_website(&host).await {
-        Some(v) => v,
-        None => {
-            return CResponseResult::NotFoundGateway;
-        }
-    };
-    let state = ClientState {
-        base: base_state,
-        website: site.clone(),
-        host,
-    };
     let resp = timeout(Duration::from_secs(60), inner_handle(req, state)).await;
     match resp {
         Ok(v) => match v {

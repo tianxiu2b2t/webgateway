@@ -132,8 +132,7 @@ pub struct AccessResponse {
     pub http_version: AccessVersion,
     pub created_at: DateTime<Utc>,
     pub responsed_at: DateTime<Utc>,
-    pub backend_request_at: DateTime<Utc>,
-    pub backend_response_at: Option<DateTime<Utc>>,
+    pub backend_responsed_at: Option<DateTime<Utc>>,
 }
 
 impl<'r> FromRow<'r, PgRow> for AccessResponse {
@@ -148,8 +147,7 @@ impl<'r> FromRow<'r, PgRow> for AccessResponse {
                 .try_get::<Option<USize>, _>("body_length")?
                 .map(|v| v.into()),
             http_version: row.try_get::<Text<AccessVersion>, _>("http_version")?.0,
-            backend_request_at: row.try_get("backend_request_at")?,
-            backend_response_at: row.try_get("backend_response_at")?,
+            backend_responsed_at: row.try_get("backend_response_at")?,
         })
     }
 }
@@ -162,6 +160,5 @@ pub struct AccessCreateResponse {
     pub body_length: usize,
     pub http_version: AccessVersion,
     pub responsed_at: DateTime<Utc>,
-    pub backend_request_at: DateTime<Utc>,
-    pub backend_response_at: Option<DateTime<Utc>>,
+    pub backend_responsed_at: Option<DateTime<Utc>>,
 }
