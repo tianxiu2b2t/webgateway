@@ -6,6 +6,7 @@ use std::{
 
 use dashmap::DashMap;
 use http_body::Body;
+use http_body_util::BodyExt;
 use hyper::{Request, Response, StatusCode, Version, body::Incoming, client, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -120,7 +121,7 @@ pub async fn handle(
         headers: req.headers().clone(),
         method: req.method().clone(),
         version: req.version(),
-        body_length: req.size_hint(),
+        body_length: req.body().size_hint(),
         remote_addr: base_state.remote_addr.to_string(),
     });
     let resp = match req_log {
@@ -137,7 +138,7 @@ pub async fn handle(
                     let resp = wrapper_inner_handle(req, state).await;
                     match resp {
                         CResponseResult::Backend(resp) => {
-                            access::add_response_log(&ResponseLog::new(req_id, resp.version(), resp.headers(), resp.status().as_u16(), resp.size_hint(), Some(get_database().get_database_time().unwrap())).unwrap());
+                            access::add_response_log(&ResponseLog::new(req_id, resp.version(), resp.headers(), resp.status().as_u16(), resp.body().size_hint(), Some(get_database().get_database_time().unwrap())).unwrap());
                             return Ok(resp);
                         },
                         resp => {

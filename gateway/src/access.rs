@@ -144,35 +144,49 @@ pub async fn background_update_access_logs() -> anyhow::Result<()> {
     loop {
         let last_time = { CURRENT_TIME.read().unwrap().clone() };
         update_time();
-        let res = match tokio::try_join!(
-            tokio::spawn(sync_access_request_logs()),
-            tokio::spawn(sync_access_response_logs())
-        ) {
-            Ok((res1, res2)) => {
-                if let Err(e) = res1 {
-                    event!(Level::ERROR, "Failed to sync access logs: {}", e);
-                }
-                if let Err(e) = res2 {
-                    event!(Level::ERROR, "Failed to sync access logs: {}", e);
-                }
-                Ok(())
+        // let res = match tokio::try_join!(
+        //     tokio::spawn(sync_access_request_logs()),
+        //     tokio::spawn(sync_access_response_logs())
+        // ) {
+        //     Ok((res1, res2)) => {
+        //         if let Err(e) = res1 {
+        //             event!(Level::ERROR, "Failed to sync access logs: {}", e);
+        //         }
+        //         if let Err(e) = res2 {
+        //             event!(Level::ERROR, "Failed to sync access logs: {}", e);
+        //         }
+        //         Ok(())
+        //     }
+        //     Err(e) => Err(e),
+        // };
+        match sync_access_request_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(Level::ERROR, "Failed to sync access request logs: {}", e);
             }
-            Err(e) => Err(e),
-        };
-        if let Err(e) = res {
-            event!(Level::ERROR, "Failed to sync access logs: {}", e);
         }
-        let updated_time = Utc::now();
+        match sync_access_response_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(Level::ERROR, "Failed to sync access response logs: {}", e);
+            }
+        }
+        let updated_time = get_database().get_database_time().unwrap();
         let next_time = (TimeDelta::seconds(1) - (updated_time - *last_time))
-            .max(TimeDelta::seconds(0))
+            .max(TimeDelta::microseconds(100))
             .to_std()?;
+
+        if next_time.is_zero() {
+            event!(Level::WARN, "Access logs update interval is too short, skipping...");
+            continue;
+        }
 
         let _ = tokio::time::sleep(next_time).await;
     }
 }
 
 fn update_time() {
-    let current_time = Utc::now().with_nanosecond(0).unwrap();
+    let current_time = get_database().get_database_time().unwrap().with_nanosecond(0).unwrap();
     let mut time = CURRENT_TIME.write().unwrap();
     *time = Arc::new(current_time);
 }
@@ -214,7 +228,7 @@ async fn sync_access_response_logs() -> anyhow::Result<()> {
         return Ok(());
     }
     // first clean old
-    ACCESS_REQUEST_LOGS.retain(|k, _| k > &current_time);
+    ACCESS_RESPONSE_LOGS.retain(|k, _| k > &current_time);
     get_database().insert_batch_access_responses(logs).await?;
     Ok(())
 }

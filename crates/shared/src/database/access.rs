@@ -148,7 +148,7 @@ impl DatabaseAccessLogsModifyRepository for Database {
             return Ok(());
         }
         let mut builder = QueryBuilder::new(
-            "INSERT INTO access_response_logs (id, status, headers, body_length, http_version, backend_response_at, responsed_at)",
+            "INSERT INTO access_response_logs (id, status, headers, body_length, http_version, backend_responsed_at, responsed_at)",
         );
         builder.push_values(responses.iter(), |mut b, resp| {
             b.push_bind(resp.id)
