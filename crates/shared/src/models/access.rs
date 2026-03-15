@@ -162,3 +162,105 @@ pub struct AccessCreateResponse {
     pub responsed_at: DateTime<Utc>,
     pub backend_responsed_at: Option<DateTime<Utc>>,
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseQPS {
+    pub count: usize,
+    pub time: DateTime<Utc>,
+}
+
+impl<'r> FromRow<'r, PgRow> for DatabaseQPS {
+    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            count: row.try_get::<USize, _>("total_requests")?.into(),
+            time: row.try_get("time")?,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResponseQPS {
+    pub data: Vec<DatabaseQPS>,
+    pub interval: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccessInfo {
+    pub total_requests: usize,
+    pub total_ips: usize,
+    pub backend_error_requests: usize,
+    pub e4xx_requests: usize,
+    pub e5xx_requests: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(try_from = "usize")]
+pub enum QueryQPSType {
+    Second = 1,
+    #[default]
+    FiveSeconds = 5
+}
+
+impl TryFrom<usize> for QueryQPSType {
+    type Error = &'static str;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(QueryQPSType::Second),
+            5 => Ok(QueryQPSType::FiveSeconds),
+            _ => Err("invalid value for QueryQPSType, expected 1 or 5"),
+        }
+    }
+}
+
+impl From<QueryQPSType> for usize {
+    fn from(value: QueryQPSType) -> Self {
+        match value {
+            QueryQPSType::Second => 1,
+            QueryQPSType::FiveSeconds => 5,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct QueryQPS {
+    pub interval: QueryQPSType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(try_from = "usize")]
+pub enum QueryAccessInfoType {
+    #[default]
+    Day = 1,
+    SevenDays = 7,
+    ThirtyDays = 30
+}
+
+impl TryFrom<usize> for QueryAccessInfoType {
+    type Error = &'static str;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(QueryAccessInfoType::Day),
+            7 => Ok(QueryAccessInfoType::SevenDays),
+            30 => Ok(QueryAccessInfoType::ThirtyDays),
+            _ => Err("invalid value for QueryAccessInfoType, expected 1, 7, or 30"),
+        }
+    }
+}
+
+impl From<QueryAccessInfoType> for usize {
+    fn from(value: QueryAccessInfoType) -> Self {
+        match value {
+            QueryAccessInfoType::Day => 1,
+            QueryAccessInfoType::SevenDays => 7,
+            QueryAccessInfoType::ThirtyDays => 30,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct QueryAccessInfo {
+    pub in_days: QueryAccessInfoType,
+}

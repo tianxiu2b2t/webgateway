@@ -1,6 +1,6 @@
 use crate::{
     database::Database,
-    models::access::{AccessCreateRequest, AccessCreateResponse},
+    models::access::{AccessCreateRequest, AccessCreateResponse, AccessInfo, DatabaseQPS, ResponseQPS},
 };
 use async_trait::async_trait;
 use sqlx::{QueryBuilder, types::Json};
@@ -66,6 +66,7 @@ impl DatabaseAccessLogsInitializer for Database {
             CREATE OR REPLACE VIEW qps_per_second_by_host_status AS
             SELECT 
                 date_trunc('second', req.requested_at) AS second,
+                date_trunc('second', req.requested_at) AS time,
                 req.host,
                 resp.status,
                 COUNT(*) AS requests_per_second
@@ -78,6 +79,7 @@ impl DatabaseAccessLogsInitializer for Database {
             CREATE OR REPLACE VIEW qps_per_5s_by_host_status AS
             SELECT 
                 to_timestamp(floor(extract(epoch from req.requested_at) / 5) * 5) AS window_start,
+                date_trunc('second', to_timestamp(floor(extract(epoch from req.requested_at) / 5) * 5)) AS time,
                 req.host,
                 resp.status,
                 COUNT(*) AS total_requests,
@@ -97,10 +99,64 @@ impl DatabaseAccessLogsInitializer for Database {
 
 // 以下为占位的空实现，可根据后续需求填充方法
 #[async_trait]
-pub trait DatabaseAccessLogsRepository {}
+pub trait DatabaseAccessLogsRepository {
+    async fn get_qps_per_second(&self) -> anyhow::Result<ResponseQPS>;
+    async fn get_qps_per_5s(&self) -> anyhow::Result<ResponseQPS>;
+    async fn get_access_info(&self, in_days: usize) -> anyhow::Result<AccessInfo>;
+}
 
 #[async_trait]
-impl DatabaseAccessLogsRepository for Database {}
+impl DatabaseAccessLogsRepository for Database {
+    async fn get_qps_per_second(&self) -> anyhow::Result<ResponseQPS> {
+        let rows = sqlx::query_as::<_, DatabaseQPS>(
+            "SELECT time, total_requests, qps FROM qps_per_second",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(ResponseQPS {
+            interval: 1,
+            data: rows,
+        })
+    }
+    async fn get_qps_per_5s(&self) -> anyhow::Result<ResponseQPS> {
+        let rows = sqlx::query_as::<_, DatabaseQPS>
+            ("SELECT time, total_requests FROM qps_per_5s")
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(ResponseQPS {
+            interval: 5,
+            data: rows,
+        })
+    }
+    async fn get_access_info(&self, in_days: usize) -> anyhow::Result<AccessInfo> {
+        // 使用 LEFT JOIN 关联请求表和响应表，一次性获取所有统计指标
+        let row = sqlx::query_as::<_, (i64, i64, i64, i64, i64)>(
+            r#"
+            SELECT
+                COUNT(req.id) AS total_requests,
+                COUNT(DISTINCT req.remote_addr) AS total_ips,
+                COUNT(resp.id) FILTER (WHERE resp.status >= 400 AND resp.status <= 499) AS e4xx_requests,
+                COUNT(resp.id) FILTER (WHERE resp.status >= 500 AND resp.status <= 599) AS e5xx_requests,
+                COUNT(req.id) FILTER (WHERE resp.id IS NULL) AS backend_error_requests
+            FROM access_request_logs req
+            LEFT JOIN access_response_logs resp ON req.id = resp.id
+            WHERE req.requested_at > NOW() - INTERVAL '1 day' * $1
+            "#,
+        )
+        .bind(in_days as i64)  // 绑定天数参数
+        .fetch_one(&self.pool)
+        .await?;
+
+        // 将数据库返回的 i64 转换为 usize（注意溢出风险，通常天数范围内的请求数不会超过 usize 最大值）
+        Ok(AccessInfo {
+            total_requests: row.0 as usize,
+            total_ips: row.1 as usize,
+            e4xx_requests: row.2 as usize,
+            e5xx_requests: row.3 as usize,
+            backend_error_requests: row.4 as usize,
+        })
+    }
+}
 
 #[async_trait]
 pub trait DatabaseAccessLogsModifyRepository {

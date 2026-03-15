@@ -6,7 +6,6 @@ use std::{
 
 use dashmap::DashMap;
 use http_body::Body;
-use http_body_util::BodyExt;
 use hyper::{Request, Response, StatusCode, Version, body::Incoming, client, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
