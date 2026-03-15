@@ -137,7 +137,7 @@ onUnmounted(() => {
 <style scoped>
 .metrics-view {
     display: flex;
-    width: auto;
+    /* width: auto; */
 }
 .metrics-view > div {
     flex: 8;
@@ -147,7 +147,8 @@ onUnmounted(() => {
     border-left: 0.2px solid var(--metrics-view-splitter-color);
 }
 .panel {
-    min-width: none;
+    min-width: 0%;
+    width: auto;
 }
 .metrics-overview > div {
     flex: 1;
