@@ -32,7 +32,7 @@ const query = computed(() => useRoute().query);
         />
     </Panel>
     <div class="statistics-overview">
-        <Metrics :in_days="+(query?.in_days || 0)" />
+        <Metrics :in_days="+(query?.in_days || 1)" />
         <QPS />
     </div>
 </template>
