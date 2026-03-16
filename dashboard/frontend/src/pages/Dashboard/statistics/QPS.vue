@@ -117,7 +117,6 @@ async function refreshQPS() {
         const currentTime = new Date(
             Math.floor(+new Date(resp.current_time) / 5000) * 5000 - 5000,
         );
-        console.log(currentTime, new Date(), resp.current_time);
         const qps: QPS[] = [];
         const mapping: Map<number, number> = new Map();
         resp.data.forEach((item) => {

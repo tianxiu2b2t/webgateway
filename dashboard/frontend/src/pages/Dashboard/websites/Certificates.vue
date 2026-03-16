@@ -62,7 +62,6 @@ onMounted(async () => {
 async function refresh() {
     tableConfig.value.total = await total();
     const res = await fetch(currentPage.value - 1, perPage.value);
-    console.log(res);
     data.value = res.map((v) => {
         return {
             name: v.name,
