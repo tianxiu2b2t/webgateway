@@ -40,24 +40,25 @@ impl DatabaseAccessLogsInitializer for Database {
             )
             "#,
             "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
+           // 替换原有的 qps_per_second 视图
             r#"CREATE OR REPLACE VIEW qps_per_second AS
                 SELECT
-                    date_trunc('second', requested_at) AS second,
-                    COUNT(*) AS total_requests,
-                    COUNT(*) AS qps  
-                FROM access_request_logs
-                GROUP BY second
-                ORDER BY second DESC;
-            "#,
+                    date_trunc('second', requested_at) AS time,
+                    COUNT(req.id) AS total_requests,
+                    COUNT(req.id) AS qps  
+                FROM access_request_logs req
+                GROUP BY time
+                ORDER BY time DESC;"#,
+                
+            // 替换原有的 qps_per_5s 视图
             r#"CREATE OR REPLACE VIEW qps_per_5s AS
                 SELECT
-                    to_timestamp(floor(extract(epoch from requested_at) / 5) * 5) AS window_start,
-                    COUNT(*) AS total_requests,                
-                    COUNT(*) / 5.0 AS avg_qps                   
-                FROM access_request_logs
-                GROUP BY window_start
-                ORDER BY window_start DESC;
-            "#,
+                    to_timestamp(floor(extract(epoch from requested_at) / 5) * 5) AS time,
+                    COUNT(req.id) AS total_requests,                
+                    COUNT(req.id) / 5.0 AS avg_qps                   
+                FROM access_request_logs req
+                GROUP BY time
+                ORDER BY time DESC;"#,
             // 加速根据 host 统计 qps
             "CREATE INDEX IF NOT EXISTS idx_access_request_logs_host_requested_at ON access_request_logs (host, requested_at);",
             "CREATE INDEX IF NOT EXISTS idx_access_response_logs_status ON access_response_logs (status);",
@@ -65,29 +66,27 @@ impl DatabaseAccessLogsInitializer for Database {
             r#"
             CREATE OR REPLACE VIEW qps_per_second_by_host_status AS
             SELECT 
-                date_trunc('second', req.requested_at) AS second,
                 date_trunc('second', req.requested_at) AS time,
                 req.host,
                 resp.status,
-                COUNT(*) AS requests_per_second
+                COUNT(req.id) AS requests_per_second
             FROM access_request_logs req
             JOIN access_response_logs resp ON req.id = resp.id
-            GROUP BY second, req.host, resp.status
-            ORDER BY second DESC, req.host, resp.status;
+            GROUP BY time, req.host, resp.status
+            ORDER BY time DESC, req.host, resp.status;
             "#,
             r#"
             CREATE OR REPLACE VIEW qps_per_5s_by_host_status AS
             SELECT 
-                to_timestamp(floor(extract(epoch from req.requested_at) / 5) * 5) AS window_start,
-                date_trunc('second', to_timestamp(floor(extract(epoch from req.requested_at) / 5) * 5)) AS time,
+                to_timestamp(floor(extract(epoch from req.requested_at) / 5) * 5) AS time,
                 req.host,
                 resp.status,
-                COUNT(*) AS total_requests,
-                COUNT(*) / 5.0 AS avg_qps
+                COUNT(req.id) AS total_requests,
+                COUNT(req.id) / 5.0 AS avg_qps
             FROM access_request_logs req
             JOIN access_response_logs resp ON req.id = resp.id
-            GROUP BY window_start, req.host, resp.status
-            ORDER BY window_start DESC, req.host, resp.status;
+            GROUP BY time, req.host, resp.status
+            ORDER BY time DESC, req.host, resp.status;
             "#,
         ] {
             sqlx::query(sql).execute(&self.pool).await?;
@@ -100,32 +99,38 @@ impl DatabaseAccessLogsInitializer for Database {
 // 以下为占位的空实现，可根据后续需求填充方法
 #[async_trait]
 pub trait DatabaseAccessLogsRepository {
-    async fn get_qps_per_second(&self) -> anyhow::Result<ResponseQPS>;
-    async fn get_qps_per_5s(&self) -> anyhow::Result<ResponseQPS>;
+    async fn get_qps_per_second(&self, count: usize) -> anyhow::Result<ResponseQPS>;
+    async fn get_qps_per_5s(&self, count: usize) -> anyhow::Result<ResponseQPS>;
     async fn get_access_info(&self, in_days: usize) -> anyhow::Result<AccessInfo>;
 }
 
 #[async_trait]
 impl DatabaseAccessLogsRepository for Database {
-    async fn get_qps_per_second(&self) -> anyhow::Result<ResponseQPS> {
+    async fn get_qps_per_second(&self, count: usize) -> anyhow::Result<ResponseQPS> {
+        let max_limit = count;
         let rows = sqlx::query_as::<_, DatabaseQPS>(
-            "SELECT time, total_requests, qps FROM qps_per_second",
+            "SELECT time, total_requests, qps FROM qps_per_secondWHERE time >= NOW() - INTERVAL '1 second' * $1 ORDER BY time DESC LIMIT $1",
         )
+        .bind(max_limit as i64)
         .fetch_all(&self.pool)
         .await?;
         Ok(ResponseQPS {
             interval: 1,
             data: rows,
+            current_time: self.get_database_time()?
         })
     }
-    async fn get_qps_per_5s(&self) -> anyhow::Result<ResponseQPS> {
+    async fn get_qps_per_5s(&self, count: usize) -> anyhow::Result<ResponseQPS> {
+        let max_limit = count * 5;
         let rows = sqlx::query_as::<_, DatabaseQPS>
-            ("SELECT time, total_requests FROM qps_per_5s")
+            ("SELECT time, total_requests FROM qps_per_5s WHERE time >= NOW() - INTERVAL '1 second' * $1 ORDER BY time DESC LIMIT $1")
+            .bind(max_limit as i64)
             .fetch_all(&self.pool)
             .await?;
         Ok(ResponseQPS {
             interval: 5,
             data: rows,
+            current_time: self.get_database_time()?
         })
     }
     async fn get_access_info(&self, in_days: usize) -> anyhow::Result<AccessInfo> {

@@ -173,7 +173,7 @@ pub struct DatabaseQPS {
 impl<'r> FromRow<'r, PgRow> for DatabaseQPS {
     fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
-            count: row.try_get::<USize, _>("total_requests")?.into(),
+            count: row.try_get::<i64, _>("total_requests")? as usize,
             time: row.try_get("time")?,
         })
     }
@@ -183,6 +183,7 @@ impl<'r> FromRow<'r, PgRow> for DatabaseQPS {
 pub struct ResponseQPS {
     pub data: Vec<DatabaseQPS>,
     pub interval: usize,
+    pub current_time: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -226,6 +227,7 @@ impl From<QueryQPSType> for usize {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct QueryQPS {
     pub interval: QueryQPSType,
+    pub count: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

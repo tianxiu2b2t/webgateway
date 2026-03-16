@@ -1,17 +1,18 @@
 import { gotWithAuth } from '../constant';
 import type { APIResponse } from '../types';
-import type { AccessInfo } from '../types/access';
+import type { AccessInfo, ResponseQPS } from '../types/access';
 
 const prefix = 'access';
 
-export async function get_qps(interval: number = 5) {
+export async function get_qps(interval: number = 5, count: number = 60) {
     const resp = (await (
         await gotWithAuth.get(`${prefix}/qps`, {
             searchParams: {
                 interval,
+                count,
             },
         })
-    ).json()) as APIResponse<any>;
+    ).json()) as APIResponse<ResponseQPS>;
     return resp;
 }
 

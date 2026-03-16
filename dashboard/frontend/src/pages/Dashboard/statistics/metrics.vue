@@ -1,105 +1,109 @@
 <template>
-    <div class="metrics-overview">
-        <Panel class="metrics-view">
-            <div>
-                <PanelViewData>
-                    <template #title> 请求次数 </template>
-                    <template #value>
-                        {{ data?.total_requests || 0 }}
-                    </template>
-                </PanelViewData>
-            </div>
-            <span></span>
-            <div>
-                <PanelViewData>
-                    <template #title> 独立 IP </template>
-                    <template #value> {{ data?.total_ips || 0 }} </template>
-                </PanelViewData>
-            </div>
-        </Panel>
-        <Panel class="metrics-view"
-            ><div>
-                <PanelViewData>
-                    <template #title> 后端错误数 </template>
-                    <template #value>
-                        {{ data?.backend_error_requests || 0 }}
-                    </template>
-                </PanelViewData>
-            </div>
-            <span></span>
-            <div>
-                <PanelViewData>
-                    <template #title> 后端错误率 </template>
-                    <template #value>
-                        {{
-                            (
-                                ((data?.total_requests || 0) == 0
-                                    ? 0
-                                    : (data?.backend_error_requests || 0) /
-                                      (data?.total_requests || 0)) * 100
-                            ).toFixed(2)
-                        }}%
-                    </template>
-                </PanelViewData>
-            </div>
-        </Panel>
-        <Panel class="metrics-view">
-            <div>
-                <PanelViewData>
-                    <template #title> 4xx 错误数 </template>
-                    <template #value>
-                        {{ data?.e4xx_requests || 0 }}
-                    </template>
-                </PanelViewData>
-            </div>
-            <span></span>
-            <div>
-                <PanelViewData>
-                    <template #title> 4xx 错误率 </template>
-                    <template #value>
-                        {{
-                            (
-                                ((data?.total_requests || 0) == 0
-                                    ? 0
-                                    : (data?.e4xx_requests || 0) /
-                                      (data?.total_requests || 0)) * 100
-                            ).toFixed(2)
-                        }}%
-                    </template>
-                </PanelViewData>
-            </div>
-        </Panel>
-        <Panel class="metrics-view">
-            <div>
-                <PanelViewData>
-                    <template #title> 5xx 错误数 </template>
-                    <template #value>
-                        {{ data?.e5xx_requests || 0 }}
-                    </template>
-                </PanelViewData>
-            </div>
-            <span></span>
-            <div>
-                <PanelViewData>
-                    <template #title> 5xx 错误率 </template>
-                    <template #value>
-                        {{
-                            (
-                                ((data?.total_requests || 0) == 0
-                                    ? 0
-                                    : (data?.e5xx_requests || 0) /
-                                      (data?.total_requests || 0)) * 100
-                            ).toFixed(2)
-                        }}%
-                    </template>
-                </PanelViewData>
-            </div>
-        </Panel>
+    <div class="metrics-root">
+        <div class="metrics-overview">
+            <Panel class="metrics-view">
+                <div>
+                    <PanelViewData>
+                        <template #title> 请求次数 </template>
+                        <template #value>
+                            {{ data?.total_requests || 0 }}
+                        </template>
+                    </PanelViewData>
+                </div>
+                <span></span>
+                <div>
+                    <PanelViewData>
+                        <template #title> 独立 IP </template>
+                        <template #value> {{ data?.total_ips || 0 }} </template>
+                    </PanelViewData>
+                </div>
+            </Panel>
+            <Panel class="metrics-view"
+                ><div>
+                    <PanelViewData>
+                        <template #title> 后端错误数 </template>
+                        <template #value>
+                            {{ data?.backend_error_requests || 0 }}
+                        </template>
+                    </PanelViewData>
+                </div>
+                <span></span>
+                <div>
+                    <PanelViewData>
+                        <template #title> 后端错误率 </template>
+                        <template #value>
+                            {{
+                                (
+                                    ((data?.total_requests || 0) == 0
+                                        ? 0
+                                        : (data?.backend_error_requests || 0) /
+                                          (data?.total_requests || 0)) * 100
+                                ).toFixed(2)
+                            }}%
+                        </template>
+                    </PanelViewData>
+                </div>
+            </Panel>
+        </div>
+        <div class="metrics-overview">
+            <Panel class="metrics-view">
+                <div>
+                    <PanelViewData>
+                        <template #title> 4xx 错误数 </template>
+                        <template #value>
+                            {{ data?.e4xx_requests || 0 }}
+                        </template>
+                    </PanelViewData>
+                </div>
+                <span></span>
+                <div>
+                    <PanelViewData>
+                        <template #title> 4xx 错误率 </template>
+                        <template #value>
+                            {{
+                                (
+                                    ((data?.total_requests || 0) == 0
+                                        ? 0
+                                        : (data?.e4xx_requests || 0) /
+                                          (data?.total_requests || 0)) * 100
+                                ).toFixed(2)
+                            }}%
+                        </template>
+                    </PanelViewData>
+                </div>
+            </Panel>
+            <Panel class="metrics-view">
+                <div>
+                    <PanelViewData>
+                        <template #title> 5xx 错误数 </template>
+                        <template #value>
+                            {{ data?.e5xx_requests || 0 }}
+                        </template>
+                    </PanelViewData>
+                </div>
+                <span></span>
+                <div>
+                    <PanelViewData>
+                        <template #title> 5xx 错误率 </template>
+                        <template #value>
+                            {{
+                                (
+                                    ((data?.total_requests || 0) == 0
+                                        ? 0
+                                        : (data?.e5xx_requests || 0) /
+                                          (data?.total_requests || 0)) * 100
+                                ).toFixed(2)
+                            }}%
+                        </template>
+                    </PanelViewData>
+                </div>
+            </Panel>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import Panel from '../../../components/Panel.vue';
 import PanelViewData from '../../../components/PanelViewData.vue';
 import { get_access_info } from '../../../apis/access';
@@ -114,14 +118,22 @@ const props = defineProps({
     },
 });
 async function refreshInfo() {
-    data.value = await get_access_info();
+    data.value = await get_access_info(props.in_days);
+    clearTimeout(task.value);
+    task.value = setTimeout(refreshInfo, 60000);
 }
+watch(
+    () => props.in_days,
+    () => {
+        refreshInfo();
+    },
+);
+
 onMounted(async () => {
     refreshInfo();
-    task.value = setInterval(refreshInfo, 60000);
 });
 onUnmounted(() => {
-    clearInterval(task.value);
+    clearTimeout(task.value);
 });
 </script>
 
@@ -160,5 +172,11 @@ onUnmounted(() => {
     gap: 16px;
     flex-wrap: wrap;
     flex-direction: row;
+}
+.metrics-overview:first-child.metrics-overview {
+    margin-bottom: 24px;
+}
+.metrics-root {
+    width: 100%;
 }
 </style>

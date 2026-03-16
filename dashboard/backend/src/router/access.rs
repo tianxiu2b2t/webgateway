@@ -10,8 +10,8 @@ pub async fn qps(
     Query(query): Query<QueryQPS>
 ) -> APIResponse<ResponseQPS> {
     APIResponse::result(match query.interval {
-        QueryQPSType::Second => get_database().get_qps_per_second().await,
-        QueryQPSType::FiveSeconds => get_database().get_qps_per_5s().await,
+        QueryQPSType::Second => get_database().get_qps_per_second(query.count).await,
+        QueryQPSType::FiveSeconds => get_database().get_qps_per_5s(query.count).await,
     })
 }
 
