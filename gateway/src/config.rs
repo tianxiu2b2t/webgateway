@@ -5,24 +5,54 @@ use shared::default::default_database_max_connections;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MainConfig {
+    #[serde(default = "config_database_url")]
     pub database: String,
     #[serde(
-        default = "default_database_max_connections",
+        default = "config_max_connections",
         rename = "database_max_connections"
     )]
     pub max_connections: u32,
+}
+
+fn config_max_connections() -> u32 {
+    // from run env
+    let env = std::env::var("DATABASE_MAX_CONNECTIONS");
+    if let Ok(v) = env && let Ok(value) = v.parse::<u32>() {
+        return value;
+    }
+    default_database_max_connections()
+}
+
+fn config_database_url() -> String {
+    // from run env
+    let env = std::env::var("DATABASE_URL");
+    if let Ok(v) = env {
+        return v;
+    }
+    "".to_string()
 }
 
 pub static CONFIG: OnceLock<MainConfig> = OnceLock::new();
 
 pub fn init_config() -> anyhow::Result<()> {
     // laod from toml
-    let content = std::fs::read_to_string("./config.toml")?;
-    let config = toml::from_str::<MainConfig>(&content)?;
+    let config = match std::fs::read_to_string("config.toml") {
+        Ok(content) => match toml::from_str::<MainConfig>(&content) {
+            Ok(config) => config,
+            Err(_) => {
+                event!(Level::WARN, "config.toml is invalid, use default config");
+                MainConfig::default()
+            }
+        },
+        Err(_) => {
+            return Err(anyhow::anyhow!("config.toml not found"));
+        }
+    };
     CONFIG.set(config).unwrap();
 
     Ok(())
 }
+
 
 pub fn get_config() -> &'static MainConfig {
     CONFIG.get().unwrap()
