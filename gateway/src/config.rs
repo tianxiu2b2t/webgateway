@@ -2,8 +2,9 @@ use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 use shared::default::default_database_max_connections;
+use tracing::{Level, event};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MainConfig {
     #[serde(default = "config_database_url")]
     pub database: String,
@@ -45,7 +46,7 @@ pub fn init_config() -> anyhow::Result<()> {
             }
         },
         Err(_) => {
-            return Err(anyhow::anyhow!("config.toml not found"));
+            MainConfig::default()
         }
     };
     CONFIG.set(config).unwrap();

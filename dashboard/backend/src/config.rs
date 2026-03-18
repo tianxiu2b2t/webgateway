@@ -69,7 +69,7 @@ pub fn init_config() -> anyhow::Result<()> {
             }
         },
         Err(_) => {
-            return Err(anyhow::anyhow!("config.toml not found"));
+            MainConfig::default()
         }
     };
     CONFIG.set(config).unwrap();

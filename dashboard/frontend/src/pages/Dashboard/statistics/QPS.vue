@@ -21,6 +21,8 @@ import {
 import Panel from '../../../components/Panel.vue';
 import { get_qps } from '../../../apis/access';
 import type { QPS } from '../../../types/access';
+import { isDark } from '../../../theme';
+import { darkMainColor, lightMainColor } from '../../../constant';
 
 // 异步加载 ECharts 组件
 const vchart = defineAsyncComponent(() => import('vue-echarts'));
@@ -30,7 +32,8 @@ const data = ref<QPS[]>([]);
 
 // ECharts 配置项（基于 data 计算）
 const option = computed(() => ({
-    color: '#0FC6C2',
+    chartTheme: isDark.value ? 'dark' : 'light',
+    color: isDark.value ? darkMainColor : lightMainColor,
     tooltip: { trigger: 'axis' },
     stateAnimation: {
         duration: 300,

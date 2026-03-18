@@ -110,3 +110,6 @@ export function pushQuery(query: Record<string, any>) {
         },
     });
 }
+
+export const lightMainColor = '#0FC6C2';
+export const darkMainColor = '#f4d1b4';

@@ -8,3 +8,5 @@
 **/config.toml
 .vscode
 node_modules
+.python-version
+ipdb/

@@ -1,5 +1,5 @@
-name: "Build Rust Application"
-description: "Build Rust Application for release or debug"
+name: "Setup Environment"
+description: "Setup Environment for release or debug"
 inputs:
   release:
     description: "Build in release mode (default: false)"
@@ -25,6 +25,11 @@ inputs:
     required: false
     default: 24 # 默认使用 Node.js 20 LTS
 
+  python-version: # 新增：Python 版本输入
+    description: "Python version to use"
+    required: false
+    default: 3.12 # 默认使用 Python 3.11
+
 runs:
   using: "composite"
   steps:
@@ -33,6 +38,16 @@ runs:
       run: |
         echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
+    - name: Download Maxmind GeoIP2
+      shell: bash
+      run: |
+        cd ipdb
+        uv install --force
+        uv run main.py
+        cd ..
+        mkdir assets/ipdb
+        cp -r ipdb/data/* ./assets/ipdb/
+
     - name: Setup toolchains
       uses: ./.github/actions/setup-toolchain
       with:
@@ -40,3 +55,4 @@ runs:
         node-version: ${{ inputs.node-version }}
         github_actor: ${{ inputs.github_actor }}
         github_token: ${{ inputs.github_token }}
+        python-version: ${{ inputs.python-version }}
