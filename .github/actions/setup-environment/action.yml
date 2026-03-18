@@ -52,6 +52,3 @@ runs:
         cd ipdb
         uv install --force
         uv run main.py
-        cd ..
-        mkdir assets/ipdb
-        cp -r ipdb/data/* ./assets/ipdb/
