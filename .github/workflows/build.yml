@@ -22,6 +22,13 @@ jobs:
         with:
           github_token: ${{ secrets.GH_TOKEN }}
 
+      - name: Download Maxmind GeoIP2
+        shell: bash
+        run: |
+          cd ipdb
+          uv sync
+          uv run main.py
+
       - name: Build And Push Rust Application
         uses: ./.github/actions/build-rust
 

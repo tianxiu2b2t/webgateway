@@ -46,9 +46,3 @@ runs:
         github_actor: ${{ inputs.github_actor }}
         github_token: ${{ inputs.github_token }}
         python-version: ${{ inputs.python-version }}
-    - name: Download Maxmind GeoIP2
-      shell: bash
-      run: |
-        cd ipdb
-        uv sync
-        uv run main.py
