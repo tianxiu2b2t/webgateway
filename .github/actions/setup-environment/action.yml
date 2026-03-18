@@ -50,5 +50,5 @@ runs:
       shell: bash
       run: |
         cd ipdb
-        uv install --force
+        uv sync
         uv run main.py
