@@ -41,6 +41,8 @@ runs:
     - name: Download Maxmind GeoIP2
       shell: bash
       run: |
+        pwd 
+        ls
         cd ipdb
         uv install --force
         uv run main.py
