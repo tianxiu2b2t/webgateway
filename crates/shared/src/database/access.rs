@@ -50,10 +50,10 @@ impl DatabaseAccessLogsInitializer for Database {
             "CREATE INDEX IF NOT EXISTS idx_access_response_logs_status ON access_response_logs (status);",
             "CREATE INDEX IF NOT EXISTS idx_access_request_logs_website_id ON access_request_logs (website_id);",
             "CREATE INDEX IF NOT EXISTS idx_access_response_logs_website_id ON access_response_logs (website_id);",
-            "CREATE INDEX idx_requested_at_date ON access_request_logs (DATE(requested_at));",
-            "CREATE INDEX idx_website_id ON access_request_logs (website_id);",
-            "CREATE INDEX idx_requested_at_date ON access_response_logs (DATE(responsed_at));",
-            "CREATE INDEX idx_website_id ON access_response_logs (website_id);",
+            // "CREATE INDEX idx_requested_at_date ON access_request_logs (DATE(requested_at));",
+            // "CREATE INDEX idx_website_id ON access_request_logs (website_id);",
+            // "CREATE INDEX idx_requested_at_date ON access_response_logs (DATE(responsed_at));",
+            // "CREATE INDEX idx_website_id ON access_response_logs (website_id);",
             // 替换原有的 qps_per_second 视图
             r#"CREATE OR REPLACE VIEW qps_per_second AS
                 SELECT
