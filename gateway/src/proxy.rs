@@ -125,6 +125,8 @@ pub async fn handle(
     host: String,
     req_id: ObjectId,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
+    let site = get_website(&host).await;
+    let website_id = site.as_ref().map(|v| v.inner().id);
     let req_log = RequestLog::new(RequestContext {
         req_id,
         host: host.clone(),
@@ -134,6 +136,7 @@ pub async fn handle(
         version: req.version(),
         body_length: req.body().size_hint(),
         remote_addr: base_state.remote_addr.to_string(),
+        website_id
     });
     let resp = match req_log {
         Ok(req_log) => {
@@ -158,6 +161,7 @@ pub async fn handle(
                                     resp.status().as_u16(),
                                     resp.body().size_hint(),
                                     Some(get_database().get_database_time().unwrap()),
+                                    website_id,
                                 )
                                 .unwrap(),
                             );
@@ -201,6 +205,7 @@ pub async fn handle(
             final_resp.status().as_u16(),
             final_resp.size_hint(),
             None,
+            website_id
         )
         .unwrap(),
     );

@@ -28,6 +28,7 @@ pub struct RequestContext {
     pub version: Version,
     pub body_length: SizeHint,
     pub remote_addr: String,
+    pub website_id: Option<ObjectId>
 }
 
 impl RequestLog {
@@ -62,6 +63,7 @@ impl RequestLog {
                 remote_addr: context.remote_addr,
                 body_length: context.body_length.lower().try_into().unwrap(),
                 requested_at: get_database().get_database_time().unwrap(),
+                website_id: context.website_id,
             },
         })
     }
@@ -79,6 +81,7 @@ impl ResponseLog {
         status: u16,
         body_length: SizeHint,
         backend_responsed_at: Option<DateTime<Utc>>,
+        website_id: Option<ObjectId>
     ) -> anyhow::Result<Self> {
         Ok(Self {
             inner: AccessCreateResponse {
@@ -105,6 +108,7 @@ impl ResponseLog {
                 body_length: body_length.lower().try_into().unwrap(),
                 responsed_at: get_database().get_database_time().unwrap(),
                 backend_responsed_at,
+                website_id
             },
         })
     }

@@ -2,101 +2,85 @@
     <div class="metrics-root">
         <div class="metrics-overview">
             <Panel class="metrics-view">
-                <div>
-                    <PanelViewData>
-                        <template #title> 请求次数 </template>
-                        <template #value>
-                            {{ data?.total_requests || 0 }}
-                        </template>
-                    </PanelViewData>
-                </div>
+                <PanelViewData>
+                    <template #title> 请求次数 </template>
+                    <template #value>
+                        {{ data?.total_requests || 0 }}
+                    </template>
+                </PanelViewData>
                 <span></span>
-                <div>
-                    <PanelViewData>
-                        <template #title> 独立 IP </template>
-                        <template #value> {{ data?.total_ips || 0 }} </template>
-                    </PanelViewData>
-                </div>
+                <PanelViewData>
+                    <template #title> 独立 IP </template>
+                    <template #value> {{ data?.total_ips || 0 }} </template>
+                </PanelViewData>
             </Panel>
-            <Panel class="metrics-view"
-                ><div>
-                    <PanelViewData>
-                        <template #title> 后端错误数 </template>
-                        <template #value>
-                            {{ data?.backend_error_requests || 0 }}
-                        </template>
-                    </PanelViewData>
-                </div>
+            <Panel class="metrics-view">
+                <PanelViewData>
+                    <template #title> 后端错误数 </template>
+                    <template #value>
+                        {{ data?.backend_error_requests || 0 }}
+                    </template>
+                </PanelViewData>
                 <span></span>
-                <div>
-                    <PanelViewData>
-                        <template #title> 后端错误率 </template>
-                        <template #value>
-                            {{
-                                (
-                                    ((data?.total_requests || 0) == 0
-                                        ? 0
-                                        : (data?.backend_error_requests || 0) /
-                                          (data?.total_requests || 0)) * 100
-                                ).toFixed(2)
-                            }}%
-                        </template>
-                    </PanelViewData>
-                </div>
+                <PanelViewData>
+                    <template #title> 后端错误率 </template>
+                    <template #value>
+                        {{
+                            (
+                                ((data?.total_requests || 0) == 0
+                                    ? 0
+                                    : (data?.backend_error_requests || 0) /
+                                      (data?.total_requests || 0)) * 100
+                            ).toFixed(2)
+                        }}%
+                    </template>
+                </PanelViewData>
             </Panel>
         </div>
         <div class="metrics-overview">
             <Panel class="metrics-view">
-                <div>
-                    <PanelViewData>
-                        <template #title> 4xx 错误数 </template>
-                        <template #value>
-                            {{ data?.e4xx_requests || 0 }}
-                        </template>
-                    </PanelViewData>
-                </div>
+                <PanelViewData>
+                    <template #title> 4xx 错误数 </template>
+                    <template #value>
+                        {{ data?.e4xx_requests || 0 }}
+                    </template>
+                </PanelViewData>
                 <span></span>
-                <div>
-                    <PanelViewData>
-                        <template #title> 4xx 错误率 </template>
-                        <template #value>
-                            {{
-                                (
-                                    ((data?.total_requests || 0) == 0
-                                        ? 0
-                                        : (data?.e4xx_requests || 0) /
-                                          (data?.total_requests || 0)) * 100
-                                ).toFixed(2)
-                            }}%
-                        </template>
-                    </PanelViewData>
-                </div>
+                <PanelViewData>
+                    <template #title> 4xx 错误率 </template>
+                    <template #value>
+                        {{
+                            (
+                                ((data?.total_requests || 0) == 0
+                                    ? 0
+                                    : (data?.e4xx_requests || 0) /
+                                      (data?.total_requests || 0)) * 100
+                            ).toFixed(2)
+                        }}%
+                    </template>
+                </PanelViewData>
             </Panel>
             <Panel class="metrics-view">
-                <div>
-                    <PanelViewData>
-                        <template #title> 5xx 错误数 </template>
-                        <template #value>
-                            {{ data?.e5xx_requests || 0 }}
-                        </template>
-                    </PanelViewData>
-                </div>
+                <PanelViewData>
+                    <template #title> 5xx 错误数 </template>
+                    <template #value>
+                        {{ data?.e5xx_requests || 0 }}
+                    </template>
+                </PanelViewData>
                 <span></span>
-                <div>
-                    <PanelViewData>
-                        <template #title> 5xx 错误率 </template>
-                        <template #value>
-                            {{
-                                (
-                                    ((data?.total_requests || 0) == 0
-                                        ? 0
-                                        : (data?.e5xx_requests || 0) /
-                                          (data?.total_requests || 0)) * 100
-                                ).toFixed(2)
-                            }}%
-                        </template>
-                    </PanelViewData>
-                </div>
+                <PanelViewData>
+                    <template #title> 5xx 错误率 </template>
+                    <template #value>
+                        {{
+                            (
+                                ((data?.total_requests || 0) == 0
+                                    ? 0
+                                    : (data?.e5xx_requests || 0) /
+                                      (data?.total_requests || 0)) * 100
+                            ).toFixed(2)
+                        }}%
+                    </template>
+                </PanelViewData>
             </Panel>
         </div>
     </div>

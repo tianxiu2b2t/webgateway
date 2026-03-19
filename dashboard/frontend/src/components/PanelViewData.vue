@@ -1,10 +1,12 @@
 <template>
-    <div class="title">
-        <div class="title-text"><slot name="title"></slot></div>
-    </div>
-    <div class="value">
-        <div class="">
-            <slot name="value"></slot>
+    <div class="panel-view-data">
+        <div class="title">
+            <div class="title-text"><slot name="title"></slot></div>
+        </div>
+        <div class="value">
+            <div class="">
+                <slot name="value"></slot>
+            </div>
         </div>
     </div>
 </template>
@@ -21,17 +23,23 @@
 }
 </style>
 <style scoped>
+.panel-view-data.small .title-text {
+    font-size: 12px;
+}
+.panel-view-data.small .value {
+    font-size: 12px;
+    font-weight: 900;
+}
 .title {
     display: flex;
     flex-direction: row;
     -webkit-box-align: center;
     place-items: center;
     color: var(--panel-view-data-title-color);
-    font-size: 12px;
+    /* font-size: 12; */
     margin-bottom: 6px;
 }
 .title-text {
-    margin-right: 8px;
     -webkit-box-flex: 0;
     flex-grow: 0;
     overflow: hidden;

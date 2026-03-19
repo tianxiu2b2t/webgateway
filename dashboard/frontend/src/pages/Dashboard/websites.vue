@@ -17,16 +17,40 @@
         </div></Panel
     >
     <div class="websites">
-        <Panel class="site" v-for="_ in websites">
+        <Panel class="site" v-for="site in websites">
             <div class="site-overview">
-                <SvgIcon
-                    name="common-earth"
-                    class="site-default-icon"
-                    size="default"
-                ></SvgIcon>
-                <span class="line"></span>
+                <div>
+                    <SvgIcon
+                        name="common-earth"
+                        class="site-default-icon"
+                        size="default"
+                    ></SvgIcon>
+                </div>
+                <div class="site-view">
+                    <PanelViewData class="small">
+                        <template #title>今日请求</template>
+                        <template #value>0</template>
+                    </PanelViewData>
+                    <div class="spt-line">
+                        <div class="spt-line-inner"></div>
+                    </div>
+                    <PanelViewData class="small">
+                        <template #title>今日流量</template>
+                        <template #value>0b</template>
+                    </PanelViewData>
+                </div>
             </div>
-            <div class="site-content"></div>
+            <div class="spt-line">
+                <div class="spt-line-inner"></div>
+            </div>
+            <div class="site-content">
+                <div>
+                    {{ site.name || '无标题' }}
+                </div>
+                <div>
+                    {{ site.hosts.join(', ') }}
+                </div>
+            </div>
         </Panel>
     </div>
 </template>
@@ -41,6 +65,7 @@ import { getWebsites } from '../../apis/websites';
 import { addDialog } from '../../plugins/dialog';
 import AddWebsite from '../../components/websites/AddWebsite.vue';
 import SvgIcon from '../../components/SvgIcon.vue';
+import PanelViewData from '../../components/PanelViewData.vue';
 const websites = ref<Website[]>([]);
 
 onMounted(async () => {
@@ -106,6 +131,16 @@ function toggleAddWebsite() {
 
 .site {
     display: flex;
+    gap: 16px;
+    flex: 1 1 auto;
+}
+.site-overview {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    gap: 16px;
+    flex-direction: column;
+    flex-wrap: nowrap;
 }
 .site-default-icon {
     width: 32px;
@@ -117,11 +152,30 @@ function toggleAddWebsite() {
     align-items: center;
     flex-shrink: 0;
 }
-.site .line {
+.spt-line {
+    display: block;
     width: 1px;
-    content: '';
-    border: 1px solid var(--main-color);
-    flex-shrink: 0;
-    transform: rotate(180deg);
+    height: 100%;
+    min-height: 100%;
+}
+.spt-line-inner {
+    display: block;
+    width: 1px;
+    border-left: 0.5px solid var(--spt-line);
+    height: 100%;
+    min-height: 100%;
+}
+.site-view {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1 1 auto;
+}
+.panel-view-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 </style>

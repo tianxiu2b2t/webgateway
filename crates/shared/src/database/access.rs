@@ -19,27 +19,29 @@ impl DatabaseAccessLogsInitializer for Database {
     async fn initialize_access_logs(&self) -> anyhow::Result<()> {
         for sql in [
             r#"CREATE TABLE IF NOT EXISTS access_request_logs (
-                id             TEXT PRIMARY KEY NOT NULL,
-                host           TEXT NOT NULL,
-                method         TEXT NOT NULL,
-                path           TEXT NOT NULL,
-                headers        JSONB NOT NULL DEFAULT '[]',
-                http_version   TEXT NOT NULL,
-                remote_addr    TEXT NOT NULL,
-                body_length    uint8 NOT NULL,
-                created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                requested_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                id                      TEXT PRIMARY KEY NOT NULL,
+                host                    TEXT NOT NULL,
+                method                  TEXT NOT NULL,
+                path                    TEXT NOT NULL,
+                headers                 JSONB NOT NULL DEFAULT '[]',
+                http_version            TEXT NOT NULL,
+                remote_addr             TEXT NOT NULL,
+                body_length             uint8 NOT NULL,
+                created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                requested_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                website_id              TEXT NOT NULL
             )
             "#,
             r#"CREATE TABLE IF NOT EXISTS access_response_logs (
-                id                  TEXT PRIMARY KEY NOT NULL REFERENCES access_request_logs(id),
-                status              UINT2 NOT NULL,
-                headers             JSONB NOT NULL DEFAULT '[]',
-                body_length         uint8,
-                http_version        TEXT NOT NULL,
-                created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                responsed_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                backend_responsed_at TIMESTAMPTZ DEFAULT NOW()
+                id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_request_logs(id),
+                status                  UINT2 NOT NULL,
+                headers                 JSONB NOT NULL DEFAULT '[]',
+                body_length             uint8,
+                http_version            TEXT NOT NULL,
+                created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                responsed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                backend_responsed_at    TIMESTAMPTZ DEFAULT NOW(),
+                website_id              TEXT NOT NULL
             )
             "#,
             "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
@@ -195,7 +197,7 @@ impl DatabaseAccessLogsModifyRepository for Database {
             return Ok(());
         }
         let mut builder = QueryBuilder::new(
-            "INSERT INTO access_request_logs (id, host, method, path, headers, http_version, remote_addr, body_length, requested_at)",
+            "INSERT INTO access_request_logs (id, host, method, path, headers, http_version, remote_addr, body_length, requested_at, website_id)",
         );
         builder.push_values(requests.iter(), |mut b, req| {
             b.push_bind(req.id)
@@ -206,7 +208,8 @@ impl DatabaseAccessLogsModifyRepository for Database {
                 .push_bind(req.http_version.to_string())
                 .push_bind(&req.remote_addr)
                 .push_bind(USize::from(req.body_length))
-                .push_bind(req.requested_at);
+                .push_bind(req.requested_at)
+                .push_bind(req.website_id);
         });
         builder.build().execute(&self.pool).await?;
         Ok(())
@@ -219,7 +222,7 @@ impl DatabaseAccessLogsModifyRepository for Database {
             return Ok(());
         }
         let mut builder = QueryBuilder::new(
-            "INSERT INTO access_response_logs (id, status, headers, body_length, http_version, backend_responsed_at, responsed_at)",
+            "INSERT INTO access_response_logs (id, status, headers, body_length, http_version, backend_responsed_at, responsed_at, website_id)",
         );
         builder.push_values(responses.iter(), |mut b, resp| {
             b.push_bind(resp.id)
@@ -228,7 +231,8 @@ impl DatabaseAccessLogsModifyRepository for Database {
                 .push_bind(USize::from(resp.body_length))
                 .push_bind(resp.http_version.to_string())
                 .push_bind(resp.backend_responsed_at)
-                .push_bind(resp.responsed_at);
+                .push_bind(resp.responsed_at)               
+                .push_bind(resp.website_id);
         });
         builder.build().execute(&self.pool).await?;
         Ok(())
