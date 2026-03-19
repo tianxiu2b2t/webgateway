@@ -47,7 +47,7 @@ runs:
         ls ./builds
         cp ./builds/gateway ./gateway/gateway
 
-        ls ./dashboard/backend/assets
+        ls ./dashboard/backend/
 
         mkdir ./dashboard/backend/run/
         mkdir ./dashboard/backend/run/assets/
