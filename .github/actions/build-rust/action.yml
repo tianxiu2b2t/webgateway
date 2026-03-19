@@ -36,45 +36,49 @@ runs:
       with:
         github_token: ${{ inputs.github_token }}
 
-    - name: Build release
-      uses: ./.github/actions/build
-      with:
-        release: true
+    # - name: Build release
+    #   uses: ./.github/actions/build
+    #   with:
+    #     release: true
 
     - name: Prepare release rust application
       shell: bash
       run: |
-        ls ./builds
-        cp ./builds/gateway ./gateway/gateway
-        cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
-
+        ls ./dashboard/backend/
         ls ./dashboard/backend/assets/
+        # ls ./builds
+        # cp ./builds/gateway ./gateway/gateway
+        # cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
+
+
+        mkdir ./dashboard/backend/assets/
+        # ls ./dashboard/backend/assets/
 
         mkdir ./dashboard/backend/run/
         mkdir ./dashboard/backend/run/assets/
-        cp ./builds/dashboard ./dashboard/backend/run/
+        # cp ./builds/dashboard ./dashboard/backend/run/
         cp -r ./dashboard/backend/assets/* ./dashboard/backend/run/assets/
 
-    - name: Build gateway and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./gateway
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository }}/gateway:latest
-          ghcr.io/${{ github.repository }}/gateway:${{ github.sha }}
-          ghcr.io/${{ github.repository }}/gateway:${{ env.RELEASE_VERSION }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+    # - name: Build gateway and push Docker image
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: ./gateway
+    #     push: true
+    #     tags: |
+    #       ghcr.io/${{ github.repository }}/gateway:latest
+    #       ghcr.io/${{ github.repository }}/gateway:${{ github.sha }}
+    #       ghcr.io/${{ github.repository }}/gateway:${{ env.RELEASE_VERSION }}
+    #     cache-from: type=gha
+    #     cache-to: type=gha,mode=max
 
-    - name: Build backend dashboard and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./dashboard/backend
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository }}/dashboard-backend:latest
-          ghcr.io/${{ github.repository }}/dashboard-backend:${{ github.sha }}
-          ghcr.io/${{ github.repository }}/dashboard-backend:${{ env.RELEASE_VERSION }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+    # - name: Build backend dashboard and push Docker image
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: ./dashboard/backend
+    #     push: true
+    #     tags: |
+    #       ghcr.io/${{ github.repository }}/dashboard-backend:latest
+    #       ghcr.io/${{ github.repository }}/dashboard-backend:${{ github.sha }}
+    #       ghcr.io/${{ github.repository }}/dashboard-backend:${{ env.RELEASE_VERSION }}
+    #     cache-from: type=gha
+    #     cache-to: type=gha,mode=max

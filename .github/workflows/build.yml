@@ -17,10 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: show .github/actions
-        shell: bash
-        run: ls -la .github/actions
-
       - name: Setup environment
         uses: ./.github/actions/setup-environment
         with:
