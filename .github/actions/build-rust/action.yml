@@ -31,15 +31,15 @@ runs:
         workspaces: |
           . -> target
 
-    - name: Download Maxmind
-      uses: ./.github/actions/download-maxmind
-      with:
-        github_token: ${{ inputs.github_token }}
-
     - name: Build release
       uses: ./.github/actions/build
       with:
         release: true
+
+    - name: Download Maxmind
+      uses: ./.github/actions/download-maxmind
+      with:
+        github_token: ${{ inputs.github_token }}
 
     - name: Prepare release rust application
       shell: bash
