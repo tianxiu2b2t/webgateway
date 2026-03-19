@@ -5,10 +5,37 @@ inputs:
     description: "Build in release mode (default: false)"
     required: false
     default: "false"
+  rust-toolchain:
+    description: "Rust version to use"
+    required: true
+    default: "stable"
+  github_token:
+    description: "GitHub token"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
+    - name: Setup Rust toolchain
+      uses: dtolnay/rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+
+    - name: Setup Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-all-crates: true # 已设置，缓存 registry 源码
+        cache-on-failure: true # 即使构建失败也保存缓存（调试时有用）
+        sharedKey: my-workspace-cache # 可选：跨分支共享基础依赖（谨慎使用）
+        workspaces: |
+          . -> target
+
+    - name: Download Maxmind
+      uses: ./.github/actions/download-maxmind
+      with:
+        github_token: ${{ inputs.github_token }}
+
     - name: Build release
       uses: ./.github/actions/build
       with:

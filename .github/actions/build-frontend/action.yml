@@ -1,9 +1,23 @@
 name: "Build Dashboard Frontend"
 description: "Build Dashboard Frontend for release or debug"
 
+inputs:
+  node-version: # 新增：Node.js 版本输入
+    description: "Node.js version to use"
+    required: false
+    default: 24 # 默认使用 Node.js 20 LTS
+
 runs:
   using: "composite"
   steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Enable Corepack (for Yarn)
+      run: corepack enable
+      shell: bash
     - name: Checkout repository
       uses: actions/checkout@v2
 
