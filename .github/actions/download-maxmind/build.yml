@@ -1,3 +1,6 @@
+name: "Download Maxmind GeoIP2"
+description: "Download Maxmind GeoIP2 database"
+
 runs:
   using: "composite"
   steps:
