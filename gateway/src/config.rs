@@ -18,7 +18,9 @@ pub struct MainConfig {
 fn config_max_connections() -> u32 {
     // from run env
     let env = std::env::var("DATABASE_MAX_CONNECTIONS");
-    if let Ok(v) = env && let Ok(value) = v.parse::<u32>() {
+    if let Ok(v) = env
+        && let Ok(value) = v.parse::<u32>()
+    {
         return value;
     }
     default_database_max_connections()
@@ -45,15 +47,12 @@ pub fn init_config() -> anyhow::Result<()> {
                 MainConfig::default()
             }
         },
-        Err(_) => {
-            MainConfig::default()
-        }
+        Err(_) => MainConfig::default(),
     };
     CONFIG.set(config).unwrap();
 
     Ok(())
 }
-
 
 pub fn get_config() -> &'static MainConfig {
     CONFIG.get().unwrap()

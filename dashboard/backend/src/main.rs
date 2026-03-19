@@ -17,11 +17,11 @@ pub mod certificate;
 pub mod config;
 mod database;
 mod foundation;
+pub mod ip;
 pub mod mnt;
 pub mod models;
 pub mod response;
 pub mod router;
-pub mod ip;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

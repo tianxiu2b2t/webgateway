@@ -1,4 +1,6 @@
-use std::sync::{Arc, LazyLock, RwLock};
+use std::
+    sync::{Arc, LazyLock, RwLock}
+;
 
 use chrono::{DateTime, TimeDelta, Timelike, Utc};
 use dashmap::DashMap;
@@ -6,7 +8,7 @@ use http_body::SizeHint;
 use hyper::{HeaderMap, Uri, Version};
 use shared::{
     database::{access::DatabaseAccessLogsModifyRepository, get_database},
-    models::access::{AccessCreateRequest, AccessCreateResponse, AccessVersion},
+    models::access::{AccessCreateRequest, AccessCreateResponse, AccessUpdateRequestSize, AccessUpdateResponseSize, AccessVersion},
     objectid::ObjectId,
 };
 use tracing::{Level, event};
@@ -64,17 +66,6 @@ impl RequestLog {
         })
     }
 }
-/*
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccessCreateResponse {
-    pub id: ObjectId,
-    pub status: u16,
-    pub headers: Vec<(String, String)>,
-    pub body_length: usize,
-    pub responsed_at: DateTime<Utc>,
-    pub backend_request_at: DateTime<Utc>,
-    pub backend_response_at: Option<DateTime<Utc>>,
-} */
 
 #[derive(Debug, Clone)]
 pub struct ResponseLog {
@@ -123,6 +114,8 @@ static ACCESS_REQUEST_LOGS: LazyLock<DashMap<Arc<DateTime<Utc>>, Vec<AccessCreat
     LazyLock::new(DashMap::new);
 static ACCESS_RESPONSE_LOGS: LazyLock<DashMap<Arc<DateTime<Utc>>, Vec<AccessCreateResponse>>> =
     LazyLock::new(DashMap::new);
+static ACCESS_REQUEST_SIZE_LOGS: LazyLock<DashMap<ObjectId, usize>> = LazyLock::new(DashMap::new);
+static ACCESS_RESPONSE_SIZE_LOGS: LazyLock<DashMap<ObjectId, usize>> = LazyLock::new(DashMap::new);
 static CURRENT_TIME: LazyLock<RwLock<Arc<DateTime<Utc>>>> =
     LazyLock::new(|| RwLock::new(Arc::new(Utc::now())));
 pub async fn init_access_logs() -> anyhow::Result<()> {
@@ -144,21 +137,6 @@ pub async fn background_update_access_logs() -> anyhow::Result<()> {
     loop {
         let last_time = { CURRENT_TIME.read().unwrap().clone() };
         update_time();
-        // let res = match tokio::try_join!(
-        //     tokio::spawn(sync_access_request_logs()),
-        //     tokio::spawn(sync_access_response_logs())
-        // ) {
-        //     Ok((res1, res2)) => {
-        //         if let Err(e) = res1 {
-        //             event!(Level::ERROR, "Failed to sync access logs: {}", e);
-        //         }
-        //         if let Err(e) = res2 {
-        //             event!(Level::ERROR, "Failed to sync access logs: {}", e);
-        //         }
-        //         Ok(())
-        //     }
-        //     Err(e) => Err(e),
-        // };
         match sync_access_request_logs().await {
             Ok(_) => {}
             Err(e) => {
@@ -171,13 +149,28 @@ pub async fn background_update_access_logs() -> anyhow::Result<()> {
                 event!(Level::ERROR, "Failed to sync access response logs: {}", e);
             }
         }
+        match sync_request_size_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(Level::ERROR, "Failed to sync access request size logs: {}", e);
+            }
+        }
+        match sync_response_size_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(Level::ERROR, "Failed to sync access response size logs: {}", e);
+            }
+        }
         let updated_time = get_database().get_database_time().unwrap();
         let next_time = (TimeDelta::seconds(1) - (updated_time - *last_time))
             .max(TimeDelta::microseconds(100))
             .to_std()?;
 
         if next_time.is_zero() {
-            event!(Level::WARN, "Access logs update interval is too short, skipping...");
+            event!(
+                Level::WARN,
+                "Access logs update interval is too short, skipping..."
+            );
             continue;
         }
 
@@ -186,7 +179,11 @@ pub async fn background_update_access_logs() -> anyhow::Result<()> {
 }
 
 fn update_time() {
-    let current_time = get_database().get_database_time().unwrap().with_nanosecond(0).unwrap();
+    let current_time = get_database()
+        .get_database_time()
+        .unwrap()
+        .with_nanosecond(0)
+        .unwrap();
     let mut time = CURRENT_TIME.write().unwrap();
     *time = Arc::new(current_time);
 }
@@ -233,6 +230,40 @@ async fn sync_access_response_logs() -> anyhow::Result<()> {
     Ok(())
 }
 
+async fn sync_request_size_logs() -> anyhow::Result<()> {
+    // clone and delete
+    let logs = ACCESS_REQUEST_SIZE_LOGS.clone();
+    // ACCESS_REQUEST_SIZE_LOGS.retain(|k, _| logs.contains_key(k));
+    if logs.is_empty() {
+        return Ok(());
+    }
+    ACCESS_REQUEST_SIZE_LOGS.retain(|k, _| !logs.contains_key(k));
+    get_database()
+        .update_batch_access_request_size_logs(logs.iter().map(|value| {
+            AccessUpdateRequestSize::from((*value.key(), *value.value()))
+        }).collect::<Vec<_>>())
+        .await?;
+
+    Ok(())
+}
+
+async fn sync_response_size_logs() -> anyhow::Result<()> {
+    // clone and delete
+    let logs = ACCESS_RESPONSE_SIZE_LOGS.clone();
+    // ACCESS_REQUEST_SIZE_LOGS.retain(|k, _| logs.contains_key(k));
+    if logs.is_empty() {
+        return Ok(());
+    }
+    ACCESS_RESPONSE_SIZE_LOGS.retain(|k, _| !logs.contains_key(k));
+    get_database()
+        .update_batch_access_response_size_logs(logs.iter().map(|value| {
+            AccessUpdateResponseSize::from((*value.key(), *value.value()))
+        }).collect::<Vec<_>>())
+        .await?;
+
+    Ok(())
+}
+
 pub fn add_request_log(log: &RequestLog) {
     let current_time = { CURRENT_TIME.read().unwrap().clone() };
     let mut logs = ACCESS_REQUEST_LOGS.entry(current_time).or_default();
@@ -243,4 +274,14 @@ pub fn add_response_log(log: &ResponseLog) {
     let current_time = { CURRENT_TIME.read().unwrap().clone() };
     let mut logs = ACCESS_RESPONSE_LOGS.entry(current_time).or_default();
     logs.push(log.inner.clone());
+}
+
+pub fn update_request_size_log(id: ObjectId, size: usize) {
+    ACCESS_REQUEST_SIZE_LOGS.insert(id, size);
+    // .
+}
+
+pub fn update_response_size_log(id: ObjectId, size: usize) {
+    ACCESS_RESPONSE_SIZE_LOGS.insert(id, size);
+    // .
 }

@@ -19,11 +19,12 @@ pub struct MainConfig {
     pub token_exp: u64,
 }
 
-
 fn config_token_expires() -> u64 {
     // from run env
     let env = std::env::var("TOKEN_EXPIRES");
-    if let Ok(v) = env && let Ok(value) = v.parse::<u64>() {
+    if let Ok(v) = env
+        && let Ok(value) = v.parse::<u64>()
+    {
         return value;
     }
     60 * 60 * 24 * 7
@@ -32,7 +33,9 @@ fn config_token_expires() -> u64 {
 fn config_dashboard_api_port() -> u16 {
     // from run env
     let env = std::env::var("DASHBOARD_API_PORT");
-    if let Ok(v) = env && let Ok(value) = v.parse::<u16>() {
+    if let Ok(v) = env
+        && let Ok(value) = v.parse::<u16>()
+    {
         return value;
     }
     default_dashboard_api_port()
@@ -41,7 +44,9 @@ fn config_dashboard_api_port() -> u16 {
 fn config_max_connections() -> u32 {
     // from run env
     let env = std::env::var("DATABASE_MAX_CONNECTIONS");
-    if let Ok(v) = env && let Ok(value) = v.parse::<u32>() {
+    if let Ok(v) = env
+        && let Ok(value) = v.parse::<u32>()
+    {
         return value;
     }
     default_database_max_connections()
@@ -68,9 +73,7 @@ pub fn init_config() -> anyhow::Result<()> {
                 MainConfig::default()
             }
         },
-        Err(_) => {
-            MainConfig::default()
-        }
+        Err(_) => MainConfig::default(),
     };
     CONFIG.set(config).unwrap();
 

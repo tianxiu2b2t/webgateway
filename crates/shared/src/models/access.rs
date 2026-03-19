@@ -163,7 +163,6 @@ pub struct AccessCreateResponse {
     pub backend_responsed_at: Option<DateTime<Utc>>,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseQPS {
     pub count: usize,
@@ -200,7 +199,7 @@ pub struct AccessInfo {
 pub enum QueryQPSType {
     Second = 1,
     #[default]
-    FiveSeconds = 5
+    FiveSeconds = 5,
 }
 
 impl TryFrom<usize> for QueryQPSType {
@@ -236,7 +235,7 @@ pub enum QueryAccessInfoType {
     #[default]
     Day = 1,
     SevenDays = 7,
-    ThirtyDays = 30
+    ThirtyDays = 30,
 }
 
 impl TryFrom<usize> for QueryAccessInfoType {
@@ -265,4 +264,29 @@ impl From<QueryAccessInfoType> for usize {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct QueryAccessInfo {
     pub in_days: QueryAccessInfoType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccessUpdateResponseSize {
+    pub id: ObjectId,
+    pub body_length: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccessUpdateRequestSize {
+    pub id: ObjectId,
+    pub body_length: usize,
+}
+
+// from
+impl From<(ObjectId, usize)> for AccessUpdateRequestSize {
+    fn from((id, body_length): (ObjectId, usize)) -> Self {
+        Self { id, body_length }
+    }
+}
+
+impl From<(ObjectId, usize)> for AccessUpdateResponseSize {
+    fn from((id, body_length): (ObjectId, usize)) -> Self {
+        Self { id, body_length }
+    }
 }

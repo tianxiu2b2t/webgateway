@@ -1,6 +1,9 @@
 use crate::{
     database::Database,
-    models::access::{AccessCreateRequest, AccessCreateResponse, AccessInfo, DatabaseQPS, ResponseQPS},
+    models::access::{
+        AccessCreateRequest, AccessCreateResponse, AccessInfo, AccessUpdateRequestSize,
+        AccessUpdateResponseSize, DatabaseQPS, ResponseQPS,
+    },
 };
 use async_trait::async_trait;
 use sqlx::{QueryBuilder, types::Json};
@@ -40,7 +43,7 @@ impl DatabaseAccessLogsInitializer for Database {
             )
             "#,
             "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
-           // 替换原有的 qps_per_second 视图
+            // 替换原有的 qps_per_second 视图
             r#"CREATE OR REPLACE VIEW qps_per_second AS
                 SELECT
                     date_trunc('second', requested_at) AS time,
@@ -49,7 +52,6 @@ impl DatabaseAccessLogsInitializer for Database {
                 FROM access_request_logs req
                 GROUP BY time
                 ORDER BY time DESC;"#,
-                
             // 替换原有的 qps_per_5s 视图
             r#"CREATE OR REPLACE VIEW qps_per_5s AS
                 SELECT
@@ -117,7 +119,7 @@ impl DatabaseAccessLogsRepository for Database {
         Ok(ResponseQPS {
             interval: 1,
             data: rows,
-            current_time: self.get_database_time()?
+            current_time: self.get_database_time()?,
         })
     }
     async fn get_qps_per_5s(&self, count: usize) -> anyhow::Result<ResponseQPS> {
@@ -130,7 +132,7 @@ impl DatabaseAccessLogsRepository for Database {
         Ok(ResponseQPS {
             interval: 5,
             data: rows,
-            current_time: self.get_database_time()?
+            current_time: self.get_database_time()?,
         })
     }
     async fn get_access_info(&self, in_days: usize) -> anyhow::Result<AccessInfo> {
@@ -172,6 +174,14 @@ pub trait DatabaseAccessLogsModifyRepository {
     async fn insert_batch_access_responses(
         &self,
         responses: Vec<AccessCreateResponse>,
+    ) -> anyhow::Result<()>;
+    async fn update_batch_access_request_size_logs(
+        &self,
+        requests: Vec<AccessUpdateRequestSize>,
+    ) -> anyhow::Result<()>;
+    async fn update_batch_access_response_size_logs(
+        &self,
+        responses: Vec<AccessUpdateResponseSize>,
     ) -> anyhow::Result<()>;
 }
 
@@ -221,6 +231,75 @@ impl DatabaseAccessLogsModifyRepository for Database {
                 .push_bind(resp.responsed_at);
         });
         builder.build().execute(&self.pool).await?;
+        Ok(())
+    }
+
+    async fn update_batch_access_request_size_logs(
+        &self,
+        requests: Vec<AccessUpdateRequestSize>,
+    ) -> anyhow::Result<()> {
+        if requests.is_empty() {
+            return Ok(());
+        }
+
+        // 构建 UPDATE 语句，使用 CASE 表达式一次更新多行
+        let mut builder =
+            sqlx::QueryBuilder::new("UPDATE access_request_logs SET body_length = CASE");
+
+        for req in &requests {
+            // 追加 WHEN id = ? THEN ? 子句
+            builder.push(" WHEN id = ");
+            builder.push_bind(req.id); // id 是 String (ObjectId 转文本)
+            builder.push(" THEN ");
+            builder.push_bind(USize::from(req.body_length)); // body_length: usize -> uint8
+        }
+        builder.push(" ELSE body_length END "); // 其余行保持原值
+
+        // 添加 WHERE 子句限定要更新的行，避免全表扫描
+        builder.push(" WHERE id IN (");
+        let mut separated = builder.separated(", ");
+        for req in &requests {
+            separated.push_bind(req.id); // 再次绑定 id 用于 IN 列表
+        }
+        builder.push(")");
+
+        // 执行批量更新
+        builder.build().execute(&self.pool).await?;
+
+        Ok(())
+    }
+    async fn update_batch_access_response_size_logs(
+        &self,
+        responses: Vec<AccessUpdateResponseSize>,
+    ) -> anyhow::Result<()> {
+        if responses.is_empty() {
+            return Ok(());
+        }
+
+        // 构建 UPDATE 语句，使用 CASE 表达式一次更新多行
+        let mut builder =
+            sqlx::QueryBuilder::new("UPDATE access_response_logs SET body_length = CASE");
+
+        for req in &responses {
+            // 追加 WHEN id = ? THEN ? 子句
+            builder.push(" WHEN id = ");
+            builder.push_bind(req.id); // id 是 String (ObjectId 转文本)
+            builder.push(" THEN ");
+            builder.push_bind(USize::from(req.body_length)); // body_length: usize -> uint8
+        }
+        builder.push(" ELSE body_length END "); // 其余行保持原值
+
+        // 添加 WHERE 子句限定要更新的行，避免全表扫描
+        builder.push(" WHERE id IN (");
+        let mut separated = builder.separated(", ");
+        for req in &responses {
+            separated.push_bind(req.id); // 再次绑定 id 用于 IN 列表
+        }
+        builder.push(")");
+
+        // 执行批量更新
+        builder.build().execute(&self.pool).await?;
+
         Ok(())
     }
 }

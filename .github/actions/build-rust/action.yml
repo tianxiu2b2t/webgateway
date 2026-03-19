@@ -46,8 +46,12 @@ runs:
       run: |
         ls ./builds
         cp ./builds/gateway ./gateway/gateway
-        cp ./builds/dashboard ./dashboard/backend/dashboard
         cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
+
+        mkdir ./dashboard/backend/run/
+        mkdir ./dashboard/backend/run/assets/
+        cp ./builds/dashboard ./dashboard/backend/run/
+        cp -r ./dashboard/backend/assets/* ./dashboard/backend/run/assets/
 
     - name: Build gateway and push Docker image
       uses: docker/build-push-action@v5

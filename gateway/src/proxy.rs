@@ -12,7 +12,10 @@ use hyper_util::{
     server::conn::auto::Builder,
 };
 use shared::{
-    database::get_database, listener::CustomDualStackTcpListener, objectid::ObjectId, streams::{BufferStream, WrapperBufferStream}
+    database::get_database,
+    listener::CustomDualStackTcpListener,
+    objectid::ObjectId,
+    streams::{BufferStream, WrapperBufferStream},
 };
 use tokio::{net::TcpStream, task::JoinHandle, time::timeout};
 use tokio_rustls::TlsAcceptor;
@@ -20,9 +23,9 @@ use tracing::{Level, event};
 
 use crate::{
     access::{self, RequestContext, RequestLog, ResponseLog},
-    response::{CResponse, CResponseResult},
     state::{BaseClientState, ClientState},
     sync::{SERVER_CONFIG, websites::get_website},
+    transport::{CResponse, CResponseResult, StatisticsIncoming},
 };
 pub mod backends;
 pub mod protocols;
@@ -100,6 +103,15 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
                     .get("host")
                     .and_then(|v| v.to_str().ok().map(|v| v.to_string()))
                     .unwrap_or_else(|| req.uri().host().map(|v| v.to_string()).unwrap_or_default());
+                let (parts, body) = req.into_parts();
+                let req = Request::from_parts(
+                    parts,
+                    StatisticsIncoming::new(
+                        req_id,
+                        body,
+                        crate::transport::StatisticsIncomingType::Request,
+                    ),
+                );
                 handle(req, state, host, req_id)
             }),
         )
@@ -108,7 +120,7 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr) -> anyhow::Resul
 }
 
 pub async fn handle(
-    req: Request<Incoming>,
+    req: Request<StatisticsIncoming>,
     base_state: Arc<BaseClientState>,
     host: String,
     req_id: ObjectId,
@@ -133,26 +145,31 @@ pub async fn handle(
                         base: base_state,
                         website: site.clone(),
                         host,
+                        id: req_id,
                     };
                     let resp = wrapper_inner_handle(req, state).await;
                     match resp {
                         CResponseResult::Backend(resp) => {
-                            access::add_response_log(&ResponseLog::new(req_id, resp.version(), resp.headers(), resp.status().as_u16(), resp.body().size_hint(), Some(get_database().get_database_time().unwrap())).unwrap());
+                            access::add_response_log(
+                                &ResponseLog::new(
+                                    req_id,
+                                    resp.version(),
+                                    resp.headers(),
+                                    resp.status().as_u16(),
+                                    resp.body().size_hint(),
+                                    Some(get_database().get_database_time().unwrap()),
+                                )
+                                .unwrap(),
+                            );
                             return Ok(resp);
-                        },
-                        resp => {
-                            resp
                         }
+                        resp => resp,
                     }
-                },
-                None => {
-                    CResponseResult::NotFoundGateway
                 }
+                None => CResponseResult::NotFoundGateway,
             }
-        },
-        Err(_) => {
-            CResponseResult::BadRequest
         }
+        Err(_) => CResponseResult::BadRequest,
     };
 
     // let resp = wrapper_inner_handle(req, base_state, host, &req_id).await;
@@ -176,12 +193,22 @@ pub async fn handle(
             .unwrap(),
         CResponseResult::Backend(_) => unreachable!(),
     };
-    access::add_response_log(&ResponseLog::new(req_id, final_resp.version(), final_resp.headers(), final_resp.status().as_u16(), final_resp.size_hint(), None).unwrap());
+    access::add_response_log(
+        &ResponseLog::new(
+            req_id,
+            final_resp.version(),
+            final_resp.headers(),
+            final_resp.status().as_u16(),
+            final_resp.size_hint(),
+            None,
+        )
+        .unwrap(),
+    );
     Ok(final_resp)
 }
 
 async fn wrapper_inner_handle(
-    req: Request<Incoming>,
+    req: Request<StatisticsIncoming>,
     state: ClientState,
 ) -> CResponseResult {
     let resp = timeout(Duration::from_secs(60), inner_handle(req, state)).await;
@@ -195,7 +222,7 @@ async fn wrapper_inner_handle(
 }
 
 async fn inner_handle(
-    origin_req: Request<Incoming>,
+    origin_req: Request<StatisticsIncoming>,
     state: ClientState,
 ) -> anyhow::Result<hyper::Response<CResponse>> {
     let site = &state.website;
@@ -243,6 +270,13 @@ async fn inner_handle(
     resp.headers_mut().insert("Server", "WebGateway".parse()?);
     let (mut parts, b) = resp.into_parts();
     parts.version = origin_version;
-    let final_resp = Response::from_parts(parts, CResponse::Incoming(b));
+    let final_resp = Response::from_parts(
+        parts,
+        CResponse::Incoming(StatisticsIncoming::new(
+            state.id,
+            b,
+            crate::transport::StatisticsIncomingType::Response,
+        )),
+    );
     Ok(final_resp)
 }

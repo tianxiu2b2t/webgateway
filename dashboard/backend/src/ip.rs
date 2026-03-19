@@ -1,5 +1,5 @@
-use std::{net::IpAddr, path::PathBuf, sync::LazyLock};
 use geoip2::{City, Reader};
+use std::{net::IpAddr, path::PathBuf, sync::LazyLock};
 
 // Reader now holds a 'static reference to the mmdb data
 pub struct CityInstance {
@@ -24,13 +24,9 @@ impl CityInstance {
     }
 }
 
-static ROOT: LazyLock<PathBuf> = LazyLock::new(|| {
-    PathBuf::from("./").join("assets").join("ipdb")
-});
+static ROOT: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from("./").join("assets").join("ipdb"));
 
-static CITY_FILE: LazyLock<PathBuf> = LazyLock::new(|| {
-    ROOT.clone().join("GeoLite2-City.mmdb")
-});
+static CITY_FILE: LazyLock<PathBuf> = LazyLock::new(|| ROOT.clone().join("GeoLite2-City.mmdb"));
 
 static CITY_INSTANCE: LazyLock<CityInstance> = LazyLock::new(|| {
     let content = std::fs::read(CITY_FILE.clone()).unwrap();

@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::anyhow;
 use protocols::tls::ProtocolTLS;
-use shared::models::websites::DatabaseWebsite;
+use shared::{models::websites::DatabaseWebsite, objectid::ObjectId};
 use tokio::net::lookup_host;
 
 use crate::proxy::backends::{BackendConnectionPool, BackendConnectionPoolConfig};
@@ -62,14 +62,21 @@ pub struct ClientState {
     pub base: Arc<BaseClientState>,
     pub website: Arc<WebSiteRunner>,
     pub host: String,
+    pub id: ObjectId,
 }
 
 impl ClientState {
-    pub fn new(base: Arc<BaseClientState>, website: Arc<WebSiteRunner>, host: String) -> Self {
+    pub fn new(
+        base: Arc<BaseClientState>,
+        website: Arc<WebSiteRunner>,
+        host: String,
+        id: &ObjectId,
+    ) -> Self {
         Self {
             base,
             website,
             host,
+            id: *id,
         }
     }
 
@@ -88,5 +95,11 @@ impl ClientState {
         } else {
             "http"
         }
+    }
+    pub fn host(&self) -> &str {
+        &self.host
+    }
+    pub fn id(&self) -> &ObjectId {
+        &self.id
     }
 }

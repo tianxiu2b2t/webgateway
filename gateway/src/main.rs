@@ -11,9 +11,9 @@ pub mod config;
 pub mod dns;
 pub mod foundation;
 pub mod proxy;
-pub mod response;
 pub mod state;
 pub mod sync;
+pub mod transport;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
