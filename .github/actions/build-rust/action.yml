@@ -44,8 +44,8 @@ runs:
     - name: Prepare release rust application
       shell: bash
       run: |
-        ls ./dashboard/backend/
-        ls ./dashboard/backend/assets/
+        ls -an ./dashboard/backend/
+        ls -an ./dashboard/backend/assets/
         # ls ./builds
         # cp ./builds/gateway ./gateway/gateway
         # cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
