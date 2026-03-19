@@ -44,7 +44,7 @@ runs:
     - name: Prepare release rust application
       shell: bash
       run: |
-        ls ./builds
+        ls ./builds >> /dev/null
         cp ./builds/gateway ./gateway/gateway
 
         ls ./dashboard/backend/
