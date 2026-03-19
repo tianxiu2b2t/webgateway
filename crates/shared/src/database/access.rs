@@ -45,6 +45,15 @@ impl DatabaseAccessLogsInitializer for Database {
             )
             "#,
             "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
+            "CREATE INDEX IF NOT EXISTS idx_responsed_at ON access_response_logs (responsed_at);",
+            "CREATE INDEX IF NOT EXISTS idx_access_request_logs_host_requested_at ON access_request_logs (host, requested_at);",
+            "CREATE INDEX IF NOT EXISTS idx_access_response_logs_status ON access_response_logs (status);",
+            "CREATE INDEX IF NOT EXISTS idx_access_request_logs_website_id ON access_request_logs (website_id);",
+            "CREATE INDEX IF NOT EXISTS idx_access_response_logs_website_id ON access_response_logs (website_id);",
+            "CREATE INDEX idx_requested_at_date ON access_request_logs (DATE(requested_at));",
+            "CREATE INDEX idx_website_id ON access_request_logs (website_id);",
+            "CREATE INDEX idx_requested_at_date ON access_response_logs (DATE(responsed_at));",
+            "CREATE INDEX idx_website_id ON access_response_logs (website_id);",
             // 替换原有的 qps_per_second 视图
             r#"CREATE OR REPLACE VIEW qps_per_second AS
                 SELECT
@@ -64,8 +73,6 @@ impl DatabaseAccessLogsInitializer for Database {
                 GROUP BY time
                 ORDER BY time DESC;"#,
             // 加速根据 host 统计 qps
-            "CREATE INDEX IF NOT EXISTS idx_access_request_logs_host_requested_at ON access_request_logs (host, requested_at);",
-            "CREATE INDEX IF NOT EXISTS idx_access_response_logs_status ON access_response_logs (status);",
             // 视图
             r#"
             CREATE OR REPLACE VIEW qps_per_second_by_host_status AS
@@ -91,6 +98,19 @@ impl DatabaseAccessLogsInitializer for Database {
             JOIN access_response_logs resp ON req.id = resp.id
             GROUP BY time, req.host, resp.status
             ORDER BY time DESC, req.host, resp.status;
+            "#,
+            r#"CREATE OR REPLACE VIEW daily_traffic_by_website AS
+            SELECT
+                DATE(req.requested_at) AS day,
+                COALESCE(req.website_id, 'global') AS website_id,
+                COUNT(req.id) AS total_requests,
+                COUNT(resp.id) AS total_responses,
+                COALESCE(SUM(req.body_length), 0) AS total_request_bytes,
+                COALESCE(SUM(resp.body_length), 0) AS total_response_bytes,
+                COALESCE(SUM(req.body_length), 0) + COALESCE(SUM(resp.body_length), 0) AS total_bytes
+            FROM access_request_logs req
+            LEFT JOIN access_response_logs resp ON req.id = resp.id
+            GROUP BY day, req.website_id;
             "#,
         ] {
             sqlx::query(sql).execute(&self.pool).await?;
