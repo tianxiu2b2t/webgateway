@@ -29,7 +29,7 @@ impl DatabaseAccessLogsInitializer for Database {
                 body_length             uint8 NOT NULL,
                 created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 requested_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                website_id              TEXT NOT NULL
+                website_id              TEXT
             )
             "#,
             r#"CREATE TABLE IF NOT EXISTS access_response_logs (
@@ -41,7 +41,7 @@ impl DatabaseAccessLogsInitializer for Database {
                 created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 responsed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 backend_responsed_at    TIMESTAMPTZ DEFAULT NOW(),
-                website_id              TEXT NOT NULL
+                website_id              TEXT
             )
             "#,
             "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
