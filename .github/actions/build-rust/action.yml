@@ -51,13 +51,14 @@ runs:
         # cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
 
 
-        mkdir ./dashboard/backend/assets/
         # ls ./dashboard/backend/assets/
 
         mkdir ./dashboard/backend/run/
         mkdir ./dashboard/backend/run/assets/
         # cp ./builds/dashboard ./dashboard/backend/run/
         cp -r ./dashboard/backend/assets/* ./dashboard/backend/run/assets/
+        ls -an ./dashboard/backend/run/
+        ls -an ./dashboard/backend/run/assets/
 
     # - name: Build gateway and push Docker image
     #   uses: docker/build-push-action@v5
