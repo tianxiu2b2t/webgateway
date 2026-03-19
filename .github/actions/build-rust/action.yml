@@ -48,6 +48,8 @@ runs:
         cp ./builds/gateway ./gateway/gateway
         cp ./builds/webgateway-mnt ./dashboard/backend/webgateway-mnt
 
+        ls ./dashboard/backend/assets/
+
         mkdir ./dashboard/backend/run/
         mkdir ./dashboard/backend/run/assets/
         cp ./builds/dashboard ./dashboard/backend/run/
