@@ -36,10 +36,10 @@ runs:
       with:
         github_token: ${{ inputs.github_token }}
 
-    # - name: Build release
-    #   uses: ./.github/actions/build
-    #   with:
-    #     release: true
+    - name: Build release
+      uses: ./.github/actions/build
+      with:
+        release: true
 
     - name: Prepare release rust application
       shell: bash
