@@ -40,12 +40,12 @@ static CREATE_TABLE_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
             website_id              TEXT
         )
         "#,
-        r#"CREATE TABLE IF NOT EXISTS access_request_size_logs(
+        r#"CREATE TABLE IF NOT EXISTS access_request_size_logs (
             id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_request_logs(id),
             body_length             uint8 NOT NULL,
-            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )"#,
-        r#"CREATE TABLE IF NOT EXISTS access_response_size_logs(
+        r#"CREATE TABLE IF NOT EXISTS access_response_size_logs (
             id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_response_logs(id),
             body_length             uint8 NOT NULL,
             created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
