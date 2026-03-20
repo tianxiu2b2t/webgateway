@@ -352,7 +352,7 @@ impl DatabaseAccessLogsModifyRepository for Database {
             return Ok(());
         }
         let mut builder = QueryBuilder::new(
-            "INSERT INTO access_response_logs (id, body_length, created_at) VALUES",
+            "INSERT INTO access_response_logs (id, body_length, created_at)",
         );
         builder.push_values(responses.iter(), |mut b, resp| {
             b.push_bind(resp.id)
@@ -371,7 +371,7 @@ impl DatabaseAccessLogsModifyRepository for Database {
             return Ok(());
         }
         let mut builder = QueryBuilder::new(
-            "INSERT INTO access_request_logs (id, body_length, created_at) VALUES",
+            "INSERT INTO access_request_logs (id, body_length, created_at)",
         );
         builder.push_values(requests.iter(), |mut b, req| {
             b.push_bind(req.id)
