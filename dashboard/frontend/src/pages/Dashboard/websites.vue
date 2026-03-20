@@ -77,6 +77,15 @@ function toggleAddWebsite() {
 }
 </script>
 
+<style>
+:root {
+    --site-spt-line: rgba(0, 0, 0, 0.3);
+}
+:root.dark {
+    --site-spt-line: rgba(255, 255, 255, 0.3);
+}
+</style>
+
 <style scoped>
 .websites-overview {
     display: flex;
@@ -161,7 +170,7 @@ function toggleAddWebsite() {
 .spt-line-inner {
     display: block;
     width: 1px;
-    border-left: 0.5px solid var(--spt-line);
+    border-left: 0.5px solid var(--site-spt-line);
     height: 100%;
     min-height: 100%;
 }

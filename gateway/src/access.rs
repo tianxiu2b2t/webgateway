@@ -168,22 +168,19 @@ pub async fn background_update_access_logs() -> anyhow::Result<()> {
 }
 
 async fn sync() {
-    let sync_access_request_logs_thread = tokio::spawn(async move {
-        match sync_access_request_logs().await {
-            Ok(_) => {}
-            Err(e) => {
-                event!(Level::ERROR, "Failed to sync access request logs: {}", e);
-            }
+    // first sync these
+    match sync_access_request_logs().await {
+        Ok(_) => {}
+        Err(e) => {
+            event!(Level::ERROR, "Failed to sync access request logs: {}", e);
         }
-    });
-    let sync_access_response_logs_thread = tokio::spawn(async move {
-        match sync_access_response_logs().await {
-            Ok(_) => {}
-            Err(e) => {
-                event!(Level::ERROR, "Failed to sync access response logs: {}", e);
-            }
+    }
+    match sync_access_response_logs().await {
+        Ok(_) => {}
+        Err(e) => {
+            event!(Level::ERROR, "Failed to sync access response logs: {}", e);
         }
-    });
+    }
     let sync_request_size_logs_thread = tokio::spawn(async move {
         match sync_request_size_logs().await {
             Ok(_) => {}
@@ -233,15 +230,13 @@ async fn sync() {
         }
     });
 
-    let (r0, r1, r2, r3, r4, r5) = tokio::join!(
-        sync_access_request_logs_thread,
-        sync_access_response_logs_thread,
+    let (r0, r1, r2, r3) = tokio::join!(
         sync_request_size_logs_thread,
         sync_response_size_logs_thread,
         sync_access_request_increase_size_logsthread,
         sync_access_response_increase_size_logsthread
     );
-    for r in [r0, r1, r2, r3, r4, r5] {
+    for r in [r0, r1, r2, r3] {
         if let Err(e) = r {
             event!(Level::ERROR, "Failed to sync access logs: {}", e);
         }
