@@ -87,7 +87,7 @@ static CREATE_VIEW_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
                 COUNT(req.id) / 5.0 AS avg_qps                   
             FROM access_request_logs req
             GROUP BY time
-            ORDER BY time DESC;"
+            ORDER BY time DESC;
         "#,
         r#"CREATE OR REPLACE VIEW daily_traffic_by_website AS
         SELECT
