@@ -88,7 +88,7 @@ static CREATE_VIEW_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
             FROM access_request_logs req
             GROUP BY time
             ORDER BY time DESC;"
-        #,
+        "#,
         r#"CREATE OR REPLACE VIEW daily_traffic_by_website AS
         SELECT
             DATE(req.requested_at) AS day,
