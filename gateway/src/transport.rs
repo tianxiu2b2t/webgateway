@@ -13,7 +13,10 @@ use hyper::{
 };
 use shared::objectid::ObjectId;
 
-use crate::access::{insert_increase_request_size_log, insert_increase_response_size_log, update_request_size_log, update_response_size_log};
+use crate::access::{
+    insert_increase_request_size_log, insert_increase_response_size_log, update_request_size_log,
+    update_response_size_log,
+};
 
 // 创建一个统一的 body 类型
 #[derive(Debug)]
@@ -58,7 +61,9 @@ impl StatisticsIncoming {
             StatisticsIncomingType::Request => {
                 insert_increase_request_size_log(self.id, current_size);
             }
-            StatisticsIncomingType::Response => insert_increase_response_size_log(self.id, current_size),
+            StatisticsIncomingType::Response => {
+                insert_increase_response_size_log(self.id, current_size)
+            }
         }
         self.size -= current_size;
     }

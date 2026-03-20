@@ -9,6 +9,7 @@ use crate::{
     },
 };
 use async_trait::async_trait;
+use simple_shared::objectid::ObjectId;
 use sqlx::{QueryBuilder, types::Json};
 use sqlx_pg_ext_uint::{c_u16::U16, c_usize::USize};
 
@@ -41,12 +42,14 @@ static CREATE_TABLE_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
         )
         "#,
         r#"CREATE TABLE IF NOT EXISTS access_request_size_logs (
-            id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_request_logs(id),
+            id                      TEXT PRIMARY KEY NOT NULL,
+            request_id              TEXT NOT NULL REFERENCES access_request_logs(id),
             body_length             uint8 NOT NULL,
             created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )"#,
         r#"CREATE TABLE IF NOT EXISTS access_response_size_logs (
-            id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_response_logs(id),
+            id                      TEXT PRIMARY KEY NOT NULL,
+            response_id             TEXT NOT NULL REFERENCES access_response_logs(id),
             body_length             uint8 NOT NULL,
             created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )"#,
@@ -65,6 +68,8 @@ static CREATE_INDEX_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
         "CREATE INDEX IF NOT EXISTS idx_access_response_size_logs_created_at ON access_response_size_logs (created_at);",
         "CREATE INDEX IF NOT EXISTS idx_access_request_size_logs_id ON access_request_size_logs (id);",
         "CREATE INDEX IF NOT EXISTS idx_access_response_size_logs_id ON access_response_size_logs (id);",
+        "CREATE INDEX IF NOT EXISTS idx_access_request_size_logs_req_id ON access_request_size_logs (request_id);",
+        "CREATE INDEX IF NOT EXISTS idx_access_response_size_logs_resp_id ON access_response_size_logs (response_id);",
     ]
 });
 
@@ -352,10 +357,11 @@ impl DatabaseAccessLogsModifyRepository for Database {
             return Ok(());
         }
         let mut builder = QueryBuilder::new(
-            "INSERT INTO access_response_logs (id, body_length, created_at)",
+            "INSERT INTO access_response_logs (id, response_id, body_length, created_at)",
         );
         builder.push_values(responses.iter(), |mut b, resp| {
-            b.push_bind(resp.id)
+            b.push_bind(ObjectId::new())
+                .push_bind(resp.id)
                 .push_bind(USize::from(resp.body_length))
                 .push_bind(resp.created_at);
         });
@@ -371,10 +377,11 @@ impl DatabaseAccessLogsModifyRepository for Database {
             return Ok(());
         }
         let mut builder = QueryBuilder::new(
-            "INSERT INTO access_request_logs (id, body_length, created_at)",
+            "INSERT INTO access_request_logs (id, request_id, body_length, created_at)",
         );
         builder.push_values(requests.iter(), |mut b, req| {
-            b.push_bind(req.id)
+            b.push_bind(ObjectId::new())
+                .push_bind(req.id)
                 .push_bind(USize::from(req.body_length))
                 .push_bind(req.created_at);
         });
