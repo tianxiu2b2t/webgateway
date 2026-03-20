@@ -1,6 +1,4 @@
-use std::
-    sync::{Arc, LazyLock, RwLock}
-;
+use std::sync::{Arc, LazyLock, RwLock};
 
 use chrono::{DateTime, TimeDelta, Timelike, Utc};
 use dashmap::DashMap;
@@ -8,7 +6,10 @@ use http_body::SizeHint;
 use hyper::{HeaderMap, Uri, Version};
 use shared::{
     database::{access::DatabaseAccessLogsModifyRepository, get_database},
-    models::access::{AccessCreateRequest, AccessCreateResponse, AccessUpdateRequestSize, AccessUpdateResponseSize, AccessVersion},
+    models::access::{
+        AccessCreateRequest, AccessCreateResponse, AccessInsertRequestSize,
+        AccessInsertResponseSize, AccessUpdateRequestSize, AccessUpdateResponseSize, AccessVersion,
+    },
     objectid::ObjectId,
 };
 use tracing::{Level, event};
@@ -28,7 +29,7 @@ pub struct RequestContext {
     pub version: Version,
     pub body_length: SizeHint,
     pub remote_addr: String,
-    pub website_id: Option<ObjectId>
+    pub website_id: Option<ObjectId>,
 }
 
 impl RequestLog {
@@ -81,7 +82,7 @@ impl ResponseLog {
         status: u16,
         body_length: SizeHint,
         backend_responsed_at: Option<DateTime<Utc>>,
-        website_id: Option<ObjectId>
+        website_id: Option<ObjectId>,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             inner: AccessCreateResponse {
@@ -108,7 +109,7 @@ impl ResponseLog {
                 body_length: body_length.lower().try_into().unwrap(),
                 responsed_at: get_database().get_database_time().unwrap(),
                 backend_responsed_at,
-                website_id
+                website_id,
             },
         })
     }
@@ -120,6 +121,13 @@ static ACCESS_RESPONSE_LOGS: LazyLock<DashMap<Arc<DateTime<Utc>>, Vec<AccessCrea
     LazyLock::new(DashMap::new);
 static ACCESS_REQUEST_SIZE_LOGS: LazyLock<DashMap<ObjectId, usize>> = LazyLock::new(DashMap::new);
 static ACCESS_RESPONSE_SIZE_LOGS: LazyLock<DashMap<ObjectId, usize>> = LazyLock::new(DashMap::new);
+
+static ACCESS_REQUEST_INSERT_SIZE_LOGS: LazyLock<
+    DashMap<Arc<DateTime<Utc>>, Vec<AccessInsertRequestSize>>,
+> = LazyLock::new(DashMap::new);
+static ACCESS_RESPONSE_INSERT_SIZE_LOGS: LazyLock<
+    DashMap<Arc<DateTime<Utc>>, Vec<AccessInsertResponseSize>>,
+> = LazyLock::new(DashMap::new);
 static CURRENT_TIME: LazyLock<RwLock<Arc<DateTime<Utc>>>> =
     LazyLock::new(|| RwLock::new(Arc::new(Utc::now())));
 pub async fn init_access_logs() -> anyhow::Result<()> {
@@ -141,30 +149,7 @@ pub async fn background_update_access_logs() -> anyhow::Result<()> {
     loop {
         let last_time = { CURRENT_TIME.read().unwrap().clone() };
         update_time();
-        match sync_access_request_logs().await {
-            Ok(_) => {}
-            Err(e) => {
-                event!(Level::ERROR, "Failed to sync access request logs: {}", e);
-            }
-        }
-        match sync_access_response_logs().await {
-            Ok(_) => {}
-            Err(e) => {
-                event!(Level::ERROR, "Failed to sync access response logs: {}", e);
-            }
-        }
-        match sync_request_size_logs().await {
-            Ok(_) => {}
-            Err(e) => {
-                event!(Level::ERROR, "Failed to sync access request size logs: {}", e);
-            }
-        }
-        match sync_response_size_logs().await {
-            Ok(_) => {}
-            Err(e) => {
-                event!(Level::ERROR, "Failed to sync access response size logs: {}", e);
-            }
-        }
+        sync().await;
         let updated_time = get_database().get_database_time().unwrap();
         let next_time = (TimeDelta::seconds(1) - (updated_time - *last_time))
             .max(TimeDelta::microseconds(100))
@@ -179,6 +164,87 @@ pub async fn background_update_access_logs() -> anyhow::Result<()> {
         }
 
         let _ = tokio::time::sleep(next_time).await;
+    }
+}
+
+async fn sync() {
+    let sync_access_request_logs_thread = tokio::spawn(async move {
+        match sync_access_request_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(Level::ERROR, "Failed to sync access request logs: {}", e);
+            }
+        }
+    });
+    let sync_access_response_logs_thread = tokio::spawn(async move {
+        match sync_access_response_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(Level::ERROR, "Failed to sync access response logs: {}", e);
+            }
+        }
+    });
+    let sync_request_size_logs_thread = tokio::spawn(async move {
+        match sync_request_size_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(
+                    Level::ERROR,
+                    "Failed to sync access request size logs: {}",
+                    e
+                );
+            }
+        }
+    });
+    let sync_response_size_logs_thread = tokio::spawn(async move {
+        match sync_response_size_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(
+                    Level::ERROR,
+                    "Failed to sync access response size logs: {}",
+                    e
+                );
+            }
+        }
+    });
+    let sync_access_request_increase_size_logsthread = tokio::spawn(async move {
+        match sync_access_request_increase_size_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(
+                    Level::ERROR,
+                    "Failed to sync access request size logs: {}",
+                    e
+                );
+            }
+        }
+    });
+    let sync_access_response_increase_size_logsthread = tokio::spawn(async move {
+        match sync_access_response_increase_size_logs().await {
+            Ok(_) => {}
+            Err(e) => {
+                event!(
+                    Level::ERROR,
+                    "Failed to sync access response size logs: {}",
+                    e
+                );
+            }
+        }
+    });
+
+    let (r0, r1, r2, r3, r4, r5) = tokio::join!(
+        sync_access_request_logs_thread,
+        sync_access_response_logs_thread,
+        sync_request_size_logs_thread,
+        sync_response_size_logs_thread,
+        sync_access_request_increase_size_logsthread,
+        sync_access_response_increase_size_logsthread
+    );
+    for r in [r0, r1, r2, r3, r4, r5] {
+        if let Err(e) = r {
+            event!(Level::ERROR, "Failed to sync access logs: {}", e);
+        }
     }
 }
 
@@ -243,9 +309,11 @@ async fn sync_request_size_logs() -> anyhow::Result<()> {
     }
     ACCESS_REQUEST_SIZE_LOGS.retain(|k, _| !logs.contains_key(k));
     get_database()
-        .update_batch_access_request_size_logs(logs.iter().map(|value| {
-            AccessUpdateRequestSize::from((*value.key(), *value.value()))
-        }).collect::<Vec<_>>())
+        .update_batch_access_request_size_logs(
+            logs.iter()
+                .map(|value| AccessUpdateRequestSize::from((*value.key(), *value.value())))
+                .collect::<Vec<_>>(),
+        )
         .await?;
 
     Ok(())
@@ -260,11 +328,59 @@ async fn sync_response_size_logs() -> anyhow::Result<()> {
     }
     ACCESS_RESPONSE_SIZE_LOGS.retain(|k, _| !logs.contains_key(k));
     get_database()
-        .update_batch_access_response_size_logs(logs.iter().map(|value| {
-            AccessUpdateResponseSize::from((*value.key(), *value.value()))
-        }).collect::<Vec<_>>())
+        .update_batch_access_response_size_logs(
+            logs.iter()
+                .map(|value| AccessUpdateResponseSize::from((*value.key(), *value.value())))
+                .collect::<Vec<_>>(),
+        )
         .await?;
 
+    Ok(())
+}
+
+async fn sync_access_response_increase_size_logs() -> anyhow::Result<()> {
+    let logs = ACCESS_RESPONSE_INSERT_SIZE_LOGS.clone();
+    let current_time = { CURRENT_TIME.read().unwrap().clone() };
+    // fetch before current_time
+    let logs = logs
+        .iter()
+        .filter_map(|v| match v.key() < &current_time {
+            true => Some(v.value().clone()),
+            false => None,
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    if logs.is_empty() {
+        return Ok(());
+    }
+    // first clean old
+    ACCESS_RESPONSE_INSERT_SIZE_LOGS.retain(|k, _| k > &current_time);
+    get_database()
+        .insert_batch_access_response_increase_size_logs(logs)
+        .await?;
+    Ok(())
+}
+
+async fn sync_access_request_increase_size_logs() -> anyhow::Result<()> {
+    let logs = ACCESS_REQUEST_INSERT_SIZE_LOGS.clone();
+    let current_time = { CURRENT_TIME.read().unwrap().clone() };
+    // fetch before current_time
+    let logs = logs
+        .iter()
+        .filter_map(|v| match v.key() < &current_time {
+            true => Some(v.value().clone()),
+            false => None,
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    if logs.is_empty() {
+        return Ok(());
+    }
+    // first clean old
+    ACCESS_REQUEST_INSERT_SIZE_LOGS.retain(|k, _| k > &current_time);
+    get_database()
+        .insert_batch_access_request_increase_size_logs(logs)
+        .await?;
     Ok(())
 }
 
@@ -288,4 +404,20 @@ pub fn update_request_size_log(id: ObjectId, size: usize) {
 pub fn update_response_size_log(id: ObjectId, size: usize) {
     ACCESS_RESPONSE_SIZE_LOGS.insert(id, size);
     // .
+}
+
+pub fn insert_increase_request_size_log(id: ObjectId, size: usize) {
+    let current_time = { CURRENT_TIME.read().unwrap().clone() };
+    let mut logs = ACCESS_REQUEST_INSERT_SIZE_LOGS
+        .entry(current_time.clone())
+        .or_default();
+    logs.push(AccessInsertRequestSize::new(id, size, *current_time));
+}
+
+pub fn insert_increase_response_size_log(id: ObjectId, size: usize) {
+    let current_time = { CURRENT_TIME.read().unwrap().clone() };
+    let mut logs = ACCESS_RESPONSE_INSERT_SIZE_LOGS
+        .entry(current_time.clone())
+        .or_default();
+    logs.push(AccessInsertResponseSize::new(id, size, *current_time));
 }

@@ -13,7 +13,7 @@ use hyper::{
 };
 use shared::objectid::ObjectId;
 
-use crate::access::{update_request_size_log, update_response_size_log};
+use crate::access::{insert_increase_request_size_log, insert_increase_response_size_log, update_request_size_log, update_response_size_log};
 
 // 创建一个统一的 body 类型
 #[derive(Debug)]
@@ -33,6 +33,7 @@ pub struct StatisticsIncoming {
     inner: Incoming,
     id: ObjectId,
     method: StatisticsIncomingType,
+    total_size: usize,
     size: usize,
 }
 
@@ -43,22 +44,38 @@ impl StatisticsIncoming {
             id,
             method,
             size: 0,
+            total_size: 0,
         }
     }
 
     pub fn real_size_hint(&self) -> usize {
-        self.size
+        self.total_size
+    }
+
+    fn increase_size(&mut self) {
+        let current_size = self.size;
+        match self.method {
+            StatisticsIncomingType::Request => {
+                insert_increase_request_size_log(self.id, current_size);
+            }
+            StatisticsIncomingType::Response => insert_increase_response_size_log(self.id, current_size),
+        }
+        self.size -= current_size;
+    }
+
+    fn update_size(&self) {
+        match self.method {
+            StatisticsIncomingType::Request => {
+                update_request_size_log(self.id, self.total_size);
+            }
+            StatisticsIncomingType::Response => update_response_size_log(self.id, self.total_size),
+        }
     }
 }
 
 impl Drop for StatisticsIncoming {
     fn drop(&mut self) {
-        match self.method {
-            StatisticsIncomingType::Request => {
-                update_request_size_log(self.id, self.size);
-            }
-            StatisticsIncomingType::Response => update_response_size_log(self.id, self.size),
-        }
+        self.update_size();
     }
 }
 
@@ -75,7 +92,9 @@ impl http_body::Body for StatisticsIncoming {
             opt.map(|result| {
                 result.map_err(|e| anyhow::anyhow!(e).into()).map(|v| {
                     v.map_data(|data| {
+                        self.total_size += data.len();
                         self.size += data.len();
+                        self.increase_size();
                         data
                     })
                 })
@@ -84,12 +103,7 @@ impl http_body::Body for StatisticsIncoming {
 
         // is end stream
         if self.inner.is_end_stream() {
-            match self.method {
-                StatisticsIncomingType::Request => {
-                    update_request_size_log(self.id, self.size);
-                }
-                StatisticsIncomingType::Response => update_response_size_log(self.id, self.size),
-            }
+            self.update_size();
         }
 
         res

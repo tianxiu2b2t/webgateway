@@ -136,7 +136,7 @@ pub async fn handle(
         version: req.version(),
         body_length: req.body().size_hint(),
         remote_addr: base_state.remote_addr.to_string(),
-        website_id
+        website_id,
     });
     let resp = match req_log {
         Ok(req_log) => {
@@ -205,7 +205,7 @@ pub async fn handle(
             final_resp.status().as_u16(),
             final_resp.size_hint(),
             None,
-            website_id
+            website_id,
         )
         .unwrap(),
     );

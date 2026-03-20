@@ -91,7 +91,7 @@ pub struct AccessRequest {
     pub body_length: usize,
     pub created_at: DateTime<Utc>,
     pub requested_at: DateTime<Utc>,
-        pub website_id: Option<ObjectId>
+    pub website_id: Option<ObjectId>,
 }
 
 impl<'r> FromRow<'r, PgRow> for AccessRequest {
@@ -107,7 +107,7 @@ impl<'r> FromRow<'r, PgRow> for AccessRequest {
             requested_at: row.try_get("requested_at")?,
             body_length: row.try_get::<USize, _>("body_length")?.into(),
             host: row.try_get("host")?,
-            website_id: row.try_get("website_id")?
+            website_id: row.try_get("website_id")?,
         })
     }
 }
@@ -123,7 +123,7 @@ pub struct AccessCreateRequest {
     pub remote_addr: String,
     pub body_length: usize,
     pub requested_at: DateTime<Utc>,
-    pub website_id: Option<ObjectId>
+    pub website_id: Option<ObjectId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,7 +136,7 @@ pub struct AccessResponse {
     pub created_at: DateTime<Utc>,
     pub responsed_at: DateTime<Utc>,
     pub backend_responsed_at: Option<DateTime<Utc>>,
-        pub website_id: Option<ObjectId>
+    pub website_id: Option<ObjectId>,
 }
 
 impl<'r> FromRow<'r, PgRow> for AccessResponse {
@@ -166,7 +166,7 @@ pub struct AccessCreateResponse {
     pub http_version: AccessVersion,
     pub responsed_at: DateTime<Utc>,
     pub backend_responsed_at: Option<DateTime<Utc>>,
-    pub website_id: Option<ObjectId>
+    pub website_id: Option<ObjectId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -294,5 +294,40 @@ impl From<(ObjectId, usize)> for AccessUpdateRequestSize {
 impl From<(ObjectId, usize)> for AccessUpdateResponseSize {
     fn from((id, body_length): (ObjectId, usize)) -> Self {
         Self { id, body_length }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccessInsertResponseSize {
+    pub id: ObjectId,
+    pub body_length: usize,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccessInsertRequestSize {
+    pub id: ObjectId,
+    pub body_length: usize,
+    pub created_at: DateTime<Utc>,
+}
+
+// from
+impl AccessInsertRequestSize {
+    pub fn new(id: ObjectId, body_length: usize, created_at: DateTime<Utc>) -> Self {
+        Self {
+            id,
+            body_length,
+            created_at,
+        }
+    }
+}
+
+impl AccessInsertResponseSize {
+    pub fn new(id: ObjectId, body_length: usize, created_at: DateTime<Utc>) -> Self {
+        Self {
+            id,
+            body_length,
+            created_at,
+        }
     }
 }

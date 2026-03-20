@@ -1,13 +1,109 @@
+use std::sync::LazyLock;
+
 use crate::{
     database::Database,
     models::access::{
-        AccessCreateRequest, AccessCreateResponse, AccessInfo, AccessUpdateRequestSize,
-        AccessUpdateResponseSize, DatabaseQPS, ResponseQPS,
+        AccessCreateRequest, AccessCreateResponse, AccessInfo, AccessInsertRequestSize,
+        AccessInsertResponseSize, AccessUpdateRequestSize, AccessUpdateResponseSize, DatabaseQPS,
+        ResponseQPS,
     },
 };
 use async_trait::async_trait;
 use sqlx::{QueryBuilder, types::Json};
 use sqlx_pg_ext_uint::{c_u16::U16, c_usize::USize};
+
+static CREATE_TABLE_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
+    vec![
+        r#"CREATE TABLE IF NOT EXISTS access_request_logs (
+            id                      TEXT PRIMARY KEY NOT NULL,
+            host                    TEXT NOT NULL,
+            method                  TEXT NOT NULL,
+            path                    TEXT NOT NULL,
+            headers                 JSONB NOT NULL DEFAULT '[]',
+            http_version            TEXT NOT NULL,
+            remote_addr             TEXT NOT NULL,
+            body_length             uint8 NOT NULL,
+            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            requested_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            website_id              TEXT
+        )
+        "#,
+        r#"CREATE TABLE IF NOT EXISTS access_response_logs (
+            id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_request_logs(id),
+            status                  UINT2 NOT NULL,
+            headers                 JSONB NOT NULL DEFAULT '[]',
+            body_length             uint8,
+            http_version            TEXT NOT NULL,
+            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            responsed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            backend_responsed_at    TIMESTAMPTZ DEFAULT NOW(),
+            website_id              TEXT
+        )
+        "#,
+        r#"CREATE TABLE IF NOT EXISTS access_request_size_logs(
+            id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_request_logs(id),
+            body_length             uint8 NOT NULL,
+            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        )"#,
+        r#"CREATE TABLE IF NOT EXISTS access_response_size_logs(
+            id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_response_logs(id),
+            body_length             uint8 NOT NULL,
+            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )"#,
+    ]
+});
+
+static CREATE_INDEX_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
+    vec![
+        "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
+        "CREATE INDEX IF NOT EXISTS idx_responsed_at ON access_response_logs (responsed_at);",
+        // "CREATE INDEX IF NOT EXISTS idx_access_request_logs_host_requested_at ON access_request_logs (host, requested_at);",
+        "CREATE INDEX IF NOT EXISTS idx_access_response_logs_status ON access_response_logs (status);",
+        "CREATE INDEX IF NOT EXISTS idx_access_request_logs_website_id ON access_request_logs (website_id);",
+        "CREATE INDEX IF NOT EXISTS idx_access_response_logs_website_id ON access_response_logs (website_id);",
+        "CREATE INDEX IF NOT EXISTS idx_access_request_size_logs_created_at ON access_request_size_logs (created_at);",
+        "CREATE INDEX IF NOT EXISTS idx_access_response_size_logs_created_at ON access_response_size_logs (created_at);",
+        "CREATE INDEX IF NOT EXISTS idx_access_request_size_logs_id ON access_request_size_logs (id);",
+        "CREATE INDEX IF NOT EXISTS idx_access_response_size_logs_id ON access_response_size_logs (id);",
+    ]
+});
+
+static CREATE_VIEW_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
+    vec![
+        r#"CREATE OR REPLACE VIEW qps_per_second AS
+            SELECT
+                date_trunc('second', requested_at) AS time,
+                COUNT(req.id) AS total_requests,
+                COUNT(req.id) AS qps  
+            FROM access_request_logs req
+            GROUP BY time
+            ORDER BY time DESC;
+        "#,
+        // 替换原有的 qps_per_5s 视图
+        r#"CREATE OR REPLACE VIEW qps_per_5s AS
+            SELECT
+                to_timestamp(floor(extract(epoch from requested_at) / 5) * 5) AS time,
+                COUNT(req.id) AS total_requests,                
+                COUNT(req.id) / 5.0 AS avg_qps                   
+            FROM access_request_logs req
+            GROUP BY time
+            ORDER BY time DESC;"
+        #,
+        r#"CREATE OR REPLACE VIEW daily_traffic_by_website AS
+        SELECT
+            DATE(req.requested_at) AS day,
+            COALESCE(req.website_id, 'global') AS website_id,
+            COUNT(req.id) AS total_requests,
+            COUNT(resp.id) AS total_responses,
+            COALESCE(SUM(req.body_length), 0) AS total_request_bytes,
+            COALESCE(SUM(resp.body_length), 0) AS total_response_bytes,
+            COALESCE(SUM(req.body_length), 0) + COALESCE(SUM(resp.body_length), 0) AS total_bytes
+        FROM access_request_logs req
+        LEFT JOIN access_response_logs resp ON req.id = resp.id
+        GROUP BY day, req.website_id;
+        "#,
+    ]
+});
 
 #[async_trait]
 pub trait DatabaseAccessLogsInitializer {
@@ -17,102 +113,15 @@ pub trait DatabaseAccessLogsInitializer {
 #[async_trait]
 impl DatabaseAccessLogsInitializer for Database {
     async fn initialize_access_logs(&self) -> anyhow::Result<()> {
-        for sql in [
-            r#"CREATE TABLE IF NOT EXISTS access_request_logs (
-                id                      TEXT PRIMARY KEY NOT NULL,
-                host                    TEXT NOT NULL,
-                method                  TEXT NOT NULL,
-                path                    TEXT NOT NULL,
-                headers                 JSONB NOT NULL DEFAULT '[]',
-                http_version            TEXT NOT NULL,
-                remote_addr             TEXT NOT NULL,
-                body_length             uint8 NOT NULL,
-                created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                requested_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                website_id              TEXT
-            )
-            "#,
-            r#"CREATE TABLE IF NOT EXISTS access_response_logs (
-                id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_request_logs(id),
-                status                  UINT2 NOT NULL,
-                headers                 JSONB NOT NULL DEFAULT '[]',
-                body_length             uint8,
-                http_version            TEXT NOT NULL,
-                created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                responsed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                backend_responsed_at    TIMESTAMPTZ DEFAULT NOW(),
-                website_id              TEXT
-            )
-            "#,
-            "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
-            "CREATE INDEX IF NOT EXISTS idx_responsed_at ON access_response_logs (responsed_at);",
-            "CREATE INDEX IF NOT EXISTS idx_access_request_logs_host_requested_at ON access_request_logs (host, requested_at);",
-            "CREATE INDEX IF NOT EXISTS idx_access_response_logs_status ON access_response_logs (status);",
-            "CREATE INDEX IF NOT EXISTS idx_access_request_logs_website_id ON access_request_logs (website_id);",
-            "CREATE INDEX IF NOT EXISTS idx_access_response_logs_website_id ON access_response_logs (website_id);",
-            // "CREATE INDEX idx_requested_at_date ON access_request_logs (DATE(requested_at));",
-            // "CREATE INDEX idx_website_id ON access_request_logs (website_id);",
-            // "CREATE INDEX idx_requested_at_date ON access_response_logs (DATE(responsed_at));",
-            // "CREATE INDEX idx_website_id ON access_response_logs (website_id);",
-            // 替换原有的 qps_per_second 视图
-            r#"CREATE OR REPLACE VIEW qps_per_second AS
-                SELECT
-                    date_trunc('second', requested_at) AS time,
-                    COUNT(req.id) AS total_requests,
-                    COUNT(req.id) AS qps  
-                FROM access_request_logs req
-                GROUP BY time
-                ORDER BY time DESC;"#,
-            // 替换原有的 qps_per_5s 视图
-            r#"CREATE OR REPLACE VIEW qps_per_5s AS
-                SELECT
-                    to_timestamp(floor(extract(epoch from requested_at) / 5) * 5) AS time,
-                    COUNT(req.id) AS total_requests,                
-                    COUNT(req.id) / 5.0 AS avg_qps                   
-                FROM access_request_logs req
-                GROUP BY time
-                ORDER BY time DESC;"#,
-            // 加速根据 host 统计 qps
-            // 视图
-            r#"
-            CREATE OR REPLACE VIEW qps_per_second_by_host_status AS
-            SELECT 
-                date_trunc('second', req.requested_at) AS time,
-                req.host,
-                resp.status,
-                COUNT(req.id) AS requests_per_second
-            FROM access_request_logs req
-            JOIN access_response_logs resp ON req.id = resp.id
-            GROUP BY time, req.host, resp.status
-            ORDER BY time DESC, req.host, resp.status;
-            "#,
-            r#"
-            CREATE OR REPLACE VIEW qps_per_5s_by_host_status AS
-            SELECT 
-                to_timestamp(floor(extract(epoch from req.requested_at) / 5) * 5) AS time,
-                req.host,
-                resp.status,
-                COUNT(req.id) AS total_requests,
-                COUNT(req.id) / 5.0 AS avg_qps
-            FROM access_request_logs req
-            JOIN access_response_logs resp ON req.id = resp.id
-            GROUP BY time, req.host, resp.status
-            ORDER BY time DESC, req.host, resp.status;
-            "#,
-            r#"CREATE OR REPLACE VIEW daily_traffic_by_website AS
-            SELECT
-                DATE(req.requested_at) AS day,
-                COALESCE(req.website_id, 'global') AS website_id,
-                COUNT(req.id) AS total_requests,
-                COUNT(resp.id) AS total_responses,
-                COALESCE(SUM(req.body_length), 0) AS total_request_bytes,
-                COALESCE(SUM(resp.body_length), 0) AS total_response_bytes,
-                COALESCE(SUM(req.body_length), 0) + COALESCE(SUM(resp.body_length), 0) AS total_bytes
-            FROM access_request_logs req
-            LEFT JOIN access_response_logs resp ON req.id = resp.id
-            GROUP BY day, req.website_id;
-            "#,
-        ] {
+        let tables = CREATE_TABLE_SQLS.clone();
+        let indexes = CREATE_INDEX_SQLS.clone();
+        let views = CREATE_VIEW_SQLS.clone();
+        for sql in [tables, indexes, views]
+            .iter()
+            .flatten()
+            .copied()
+            .collect::<Vec<_>>()
+        {
             sqlx::query(sql).execute(&self.pool).await?;
         }
 
@@ -205,6 +214,14 @@ pub trait DatabaseAccessLogsModifyRepository {
         &self,
         responses: Vec<AccessUpdateResponseSize>,
     ) -> anyhow::Result<()>;
+    async fn insert_batch_access_response_increase_size_logs(
+        &self,
+        responses: Vec<AccessInsertResponseSize>,
+    ) -> anyhow::Result<()>;
+    async fn insert_batch_access_request_increase_size_logs(
+        &self,
+        requests: Vec<AccessInsertRequestSize>,
+    ) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -251,7 +268,7 @@ impl DatabaseAccessLogsModifyRepository for Database {
                 .push_bind(USize::from(resp.body_length))
                 .push_bind(resp.http_version.to_string())
                 .push_bind(resp.backend_responsed_at)
-                .push_bind(resp.responsed_at)               
+                .push_bind(resp.responsed_at)
                 .push_bind(resp.website_id);
         });
         builder.build().execute(&self.pool).await?;
@@ -324,6 +341,44 @@ impl DatabaseAccessLogsModifyRepository for Database {
         // 执行批量更新
         builder.build().execute(&self.pool).await?;
 
+        Ok(())
+    }
+
+    async fn insert_batch_access_response_increase_size_logs(
+        &self,
+        responses: Vec<AccessInsertResponseSize>,
+    ) -> anyhow::Result<()> {
+        if responses.is_empty() {
+            return Ok(());
+        }
+        let mut builder = QueryBuilder::new(
+            "INSERT INTO access_response_logs (id, body_length, created_at) VALUES",
+        );
+        builder.push_values(responses.iter(), |mut b, resp| {
+            b.push_bind(resp.id)
+                .push_bind(USize::from(resp.body_length))
+                .push_bind(resp.created_at);
+        });
+        builder.build().execute(&self.pool).await?;
+        Ok(())
+    }
+
+    async fn insert_batch_access_request_increase_size_logs(
+        &self,
+        requests: Vec<AccessInsertRequestSize>,
+    ) -> anyhow::Result<()> {
+        if requests.is_empty() {
+            return Ok(());
+        }
+        let mut builder = QueryBuilder::new(
+            "INSERT INTO access_request_logs (id, body_length, created_at) VALUES",
+        );
+        builder.push_values(requests.iter(), |mut b, req| {
+            b.push_bind(req.id)
+                .push_bind(USize::from(req.body_length))
+                .push_bind(req.created_at);
+        });
+        builder.build().execute(&self.pool).await?;
         Ok(())
     }
 }
