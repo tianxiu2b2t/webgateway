@@ -237,7 +237,7 @@ pub async fn client_ip_middleware(
     let ip = extract_ip_from_headers(headers).unwrap_or(addr);
 
     request.extensions_mut().insert(RemoteAddr(ip));
-    println!("client_ip_middleware: {:?}", ip);
+    // println!("client_ip_middleware: {:?}", ip);
     next.run(request).await
 }
 

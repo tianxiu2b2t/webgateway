@@ -5,23 +5,34 @@
                 <PanelViewData>
                     <template #title> 请求次数 </template>
                     <template #value>
-                        {{ data?.total_requests || 0 }}
+                        <DataView
+                            :data="data?.total_requests || 0"
+                            :format="formatNumber"
+                        ></DataView>
                     </template>
                 </PanelViewData>
-                <span></span>
+                <div class="spt-line"></div>
                 <PanelViewData>
                     <template #title> 独立 IP </template>
-                    <template #value> {{ data?.total_ips || 0 }} </template>
+                    <template #value>
+                        <DataView
+                            :data="data?.total_ips || 0"
+                            :format="formatNumber"
+                        ></DataView>
+                    </template>
                 </PanelViewData>
             </Panel>
             <Panel class="metrics-view">
                 <PanelViewData>
                     <template #title> 后端错误数 </template>
                     <template #value>
-                        {{ data?.backend_error_requests || 0 }}
+                        <DataView
+                            :data="data?.backend_error_requests || 0"
+                            :format="formatNumber"
+                        ></DataView>
                     </template>
                 </PanelViewData>
-                <span></span>
+                <div class="spt-line"></div>
                 <PanelViewData>
                     <template #title> 后端错误率 </template>
                     <template #value>
@@ -36,16 +47,30 @@
                     </template>
                 </PanelViewData>
             </Panel>
+            <Panel>
+                <PanelViewData>
+                    <template #title> 请求流量 </template>
+                    <template #value>
+                        <DataView
+                            :data="data?.total_request_size || 0"
+                            :format="formatBytes"
+                        ></DataView>
+                    </template>
+                </PanelViewData>
+            </Panel>
         </div>
         <div class="metrics-overview">
             <Panel class="metrics-view">
                 <PanelViewData>
                     <template #title> 4xx 错误数 </template>
                     <template #value>
-                        {{ data?.e4xx_requests || 0 }}
+                        <DataView
+                            :data="data?.e4xx_requests || 0"
+                            :format="formatNumber"
+                        ></DataView>
                     </template>
                 </PanelViewData>
-                <span></span>
+                <div class="spt-line"></div>
                 <PanelViewData>
                     <template #title> 4xx 错误率 </template>
                     <template #value>
@@ -64,10 +89,13 @@
                 <PanelViewData>
                     <template #title> 5xx 错误数 </template>
                     <template #value>
-                        {{ data?.e5xx_requests || 0 }}
+                        <DataView
+                            :data="data?.e5xx_requests || 0"
+                            :format="formatNumber"
+                        ></DataView>
                     </template>
                 </PanelViewData>
-                <span></span>
+                <div class="spt-line"></div>
                 <PanelViewData>
                     <template #title> 5xx 错误率 </template>
                     <template #value>
@@ -82,6 +110,17 @@
                     </template>
                 </PanelViewData>
             </Panel>
+            <Panel>
+                <PanelViewData>
+                    <template #title> 响应流量 </template>
+                    <template #value>
+                        <DataView
+                            :data="data?.total_response_size || 0"
+                            :format="formatBytes"
+                        ></DataView>
+                    </template>
+                </PanelViewData>
+            </Panel>
         </div>
     </div>
 </template>
@@ -92,6 +131,8 @@ import Panel from '../../../components/Panel.vue';
 import PanelViewData from '../../../components/PanelViewData.vue';
 import { get_access_info } from '../../../apis/access';
 import type { AccessInfo } from '../../../types/access';
+import { formatBytes, formatNumber } from '../../../units';
+import DataView from '../../../components/DataView.vue';
 
 const data = ref<AccessInfo>();
 const task = ref();
@@ -138,7 +179,7 @@ onUnmounted(() => {
 .metrics-view > div {
     flex: 8;
 }
-.metrics-view span {
+.metrics-view .spt-line {
     flex: 1;
     border-left: 0.2px solid var(--metrics-view-splitter-color);
 }
@@ -148,6 +189,9 @@ onUnmounted(() => {
 }
 .metrics-overview > div {
     flex: 1;
+}
+.metrics-overview > div:last-child {
+    flex: 0.5;
 }
 .metrics-overview {
     display: flex;

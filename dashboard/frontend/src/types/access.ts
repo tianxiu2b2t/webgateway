@@ -4,6 +4,8 @@ export interface AccessInfo {
     backend_error_requests: number;
     e4xx_requests: number;
     e5xx_requests: number;
+    total_request_size: number;
+    total_response_size: number;
 }
 export interface DataQPS {
     count: number;

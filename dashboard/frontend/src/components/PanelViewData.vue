@@ -4,9 +4,7 @@
             <div class="title-text"><slot name="title"></slot></div>
         </div>
         <div class="value">
-            <div class="">
-                <slot name="value"></slot>
-            </div>
+            <slot name="value"></slot>
         </div>
     </div>
 </template>

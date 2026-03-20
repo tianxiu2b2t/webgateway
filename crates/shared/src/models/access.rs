@@ -198,6 +198,8 @@ pub struct AccessInfo {
     pub backend_error_requests: usize,
     pub e4xx_requests: usize,
     pub e5xx_requests: usize,
+    pub total_request_size: usize,
+    pub total_response_size: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -330,4 +332,18 @@ impl AccessInsertResponseSize {
             created_at,
         }
     }
+}
+
+
+// Website Access Info
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebsiteAccessInfo {
+    pub total_requests: usize,
+    pub total_responses: usize,
+    pub total_ips: usize,
+    pub backend_error_requests: usize,
+    pub e4xx_requests: usize,
+    pub e5xx_requests: usize,
+    pub total_requests_size: usize,
+    pub total_response_size: usize,
 }

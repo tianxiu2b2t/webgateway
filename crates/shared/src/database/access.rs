@@ -173,18 +173,49 @@ impl DatabaseAccessLogsRepository for Database {
     }
     async fn get_access_info(&self, in_days: usize) -> anyhow::Result<AccessInfo> {
         // 使用 LEFT JOIN 关联请求表和响应表，一次性获取所有统计指标
-        let row = sqlx::query_as::<_, (i64, i64, i64, i64, i64)>(
-            r#"
-            SELECT
-                COUNT(req.id) AS total_requests,
-                COUNT(DISTINCT req.remote_addr) AS total_ips,
-                COUNT(resp.id) FILTER (WHERE resp.status >= 400 AND resp.status <= 499) AS e4xx_requests,
-                COUNT(resp.id) FILTER (WHERE resp.status >= 500 AND resp.status <= 599) AS e5xx_requests,
-                COUNT(req.id) FILTER (WHERE resp.id IS NULL) AS backend_error_requests
-            FROM access_request_logs req
-            LEFT JOIN access_response_logs resp ON req.id = resp.id
-            WHERE req.requested_at > NOW() - INTERVAL '1 day' * $1
-            "#,
+        let row = sqlx::query_as::<_, (i64, i64, i64, i64, i64, USize, USize)>(
+            // r#"
+            // SELECT
+            //     COUNT(req.id) AS total_requests,
+            //     COUNT(DISTINCT req.remote_addr) AS total_ips,
+            //     COUNT(resp.id) FILTER (WHERE resp.status >= 400 AND resp.status <= 499) AS e4xx_requests,
+            //     COUNT(resp.id) FILTER (WHERE resp.status >= 500 AND resp.status <= 599) AS e5xx_requests,
+            //     COUNT(req.id) FILTER (WHERE resp.id IS NULL) AS backend_error_requests,
+            //     COALESCE(SUM(req_size.body_length), 0) AS total_requests_size,
+            //     COALESCE(SUM(resp_size.body_length), 0) AS total_response_size
+            // FROM access_request_logs req
+            // LEFT JOIN access_response_logs resp ON req.id = resp.id
+            // LEFT JOIN access_request_size_logs req_size ON req.id = req_size.request_id
+            // LEFT JOIN access_response_size_logs resp_size ON req.id = resp_size.request_id
+            // WHERE req.requested_at > NOW() - INTERVAL '1 day' * $1 AND req_size.created_at > NOW() - INTERVAL '1 day' * $1 AND resp_size.created_at > NOW() - INTERVAL '1 day' * $1
+            // "#,
+            r#"        WITH
+        req_size_agg AS (
+            SELECT request_id, SUM(body_length) AS total_request_size
+            FROM access_request_size_logs
+            WHERE created_at > NOW() - INTERVAL '1 day' * $1
+            GROUP BY request_id
+        ),
+        resp_size_agg AS (
+            SELECT response_id, SUM(body_length) AS total_response_size
+            FROM access_response_size_logs
+            WHERE created_at > NOW() - INTERVAL '1 day' * $1
+            GROUP BY response_id
+        )
+        SELECT
+            COUNT(req.id) AS total_requests,
+            COUNT(DISTINCT req.remote_addr) AS total_ips,
+            COUNT(resp.id) FILTER (WHERE resp.status >= 400 AND resp.status <= 499) AS e4xx_requests,
+            COUNT(resp.id) FILTER (WHERE resp.status >= 500 AND resp.status <= 599) AS e5xx_requests,
+            COUNT(req.id) FILTER (WHERE resp.id IS NULL) AS backend_error_requests,
+            COALESCE(SUM(req_agg.total_request_size), 0)::uint8 AS total_requests_size,
+            COALESCE(SUM(resp_agg.total_response_size), 0)::uint8 AS total_response_size
+        FROM access_request_logs req
+        LEFT JOIN access_response_logs resp ON req.id = resp.id
+        LEFT JOIN req_size_agg req_agg ON req.id = req_agg.request_id
+        LEFT JOIN resp_size_agg resp_agg ON req.id = resp_agg.response_id
+        WHERE req.requested_at > NOW() - INTERVAL '1 day' * $1
+        "#,
         )
         .bind(in_days as i64)  // 绑定天数参数
         .fetch_one(&self.pool)
@@ -197,6 +228,8 @@ impl DatabaseAccessLogsRepository for Database {
             e4xx_requests: row.2 as usize,
             e5xx_requests: row.3 as usize,
             backend_error_requests: row.4 as usize,
+            total_request_size: row.5.into(),
+            total_response_size: row.6.into(),
         })
     }
 }
