@@ -29,14 +29,26 @@
                 <div class="site-view">
                     <PanelViewData class="small">
                         <template #title>今日请求</template>
-                        <template #value>0</template>
+                        <template #value
+                            ><DataView
+                                :data="metrics[site.id]?.total_requests || 0"
+                                :format="formatNumber"
+                        /></template>
                     </PanelViewData>
                     <div class="spt-line">
                         <div class="spt-line-inner"></div>
                     </div>
                     <PanelViewData class="small">
                         <template #title>今日流量</template>
-                        <template #value>0b</template>
+                        <template #value
+                            ><DataView
+                                :data="
+                                    (metrics[site.id]?.total_request_size ||
+                                        0) +
+                                    (metrics[site.id]?.total_response_size || 0)
+                                "
+                                :format="formatBytes"
+                        /></template>
                     </PanelViewData>
                 </div>
             </div>
@@ -66,10 +78,21 @@ import { addDialog, listen, unlisten } from '../../plugins/dialog';
 import AddWebsite from '../../components/websites/AddWebsite.vue';
 import SvgIcon from '../../components/SvgIcon.vue';
 import PanelViewData from '../../components/PanelViewData.vue';
+import type { TodayMetricsInfoOfWebsites } from '../../types/access';
+import { get_today_metrics_info_of_websites } from '../../apis/access';
+import DataView from '../../components/DataView.vue';
+import { formatBytes, formatNumber } from '../../units';
 const websites = ref<Website[]>([]);
+const metrics = ref<Record<string, TodayMetricsInfoOfWebsites>>({});
 
 async function refresh() {
     websites.value = await getWebsites();
+    const web_metrics: Record<string, TodayMetricsInfoOfWebsites> = {};
+    for (const site of await get_today_metrics_info_of_websites()) {
+        if (!site.website_id) continue;
+        web_metrics[site.website_id] = site;
+    }
+    metrics.value = web_metrics;
 }
 
 onMounted(refresh);

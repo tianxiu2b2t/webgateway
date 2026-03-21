@@ -1,11 +1,9 @@
-use std::sync::LazyLock;
-
 use crate::{
     database::Database,
     models::access::{
         AccessCreateRequest, AccessCreateResponse, AccessInfo, AccessInsertRequestSize,
         AccessInsertResponseSize, AccessUpdateRequestSize, AccessUpdateResponseSize, DatabaseQPS,
-        ResponseQPS,
+        ResponseQPS, TodayMetricsInfoOfWebsite,
     },
 };
 use async_trait::async_trait;
@@ -13,102 +11,7 @@ use simple_shared::objectid::ObjectId;
 use sqlx::{QueryBuilder, types::Json};
 use sqlx_pg_ext_uint::{c_u16::U16, c_usize::USize};
 
-static CREATE_TABLE_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
-    vec![
-        r#"CREATE TABLE IF NOT EXISTS access_request_logs (
-            id                      TEXT PRIMARY KEY NOT NULL,
-            host                    TEXT NOT NULL,
-            method                  TEXT NOT NULL,
-            path                    TEXT NOT NULL,
-            headers                 JSONB NOT NULL DEFAULT '[]',
-            http_version            TEXT NOT NULL,
-            remote_addr             TEXT NOT NULL,
-            body_length             uint8 NOT NULL,
-            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            requested_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            website_id              TEXT
-        )
-        "#,
-        r#"CREATE TABLE IF NOT EXISTS access_response_logs (
-            id                      TEXT PRIMARY KEY NOT NULL REFERENCES access_request_logs(id),
-            status                  UINT2 NOT NULL,
-            headers                 JSONB NOT NULL DEFAULT '[]',
-            body_length             uint8,
-            http_version            TEXT NOT NULL,
-            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            responsed_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            backend_responsed_at    TIMESTAMPTZ DEFAULT NOW(),
-            website_id              TEXT
-        )
-        "#,
-        r#"CREATE TABLE IF NOT EXISTS access_request_size_logs (
-            id                      TEXT PRIMARY KEY NOT NULL,
-            request_id              TEXT NOT NULL REFERENCES access_request_logs(id),
-            body_length             uint8 NOT NULL,
-            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )"#,
-        r#"CREATE TABLE IF NOT EXISTS access_response_size_logs (
-            id                      TEXT PRIMARY KEY NOT NULL,
-            response_id             TEXT NOT NULL REFERENCES access_response_logs(id),
-            body_length             uint8 NOT NULL,
-            created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )"#,
-    ]
-});
-
-static CREATE_INDEX_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
-    vec![
-        "CREATE INDEX IF NOT EXISTS idx_requested_at ON access_request_logs (requested_at);",
-        "CREATE INDEX IF NOT EXISTS idx_responsed_at ON access_response_logs (responsed_at);",
-        // "CREATE INDEX IF NOT EXISTS idx_access_request_logs_host_requested_at ON access_request_logs (host, requested_at);",
-        "CREATE INDEX IF NOT EXISTS idx_access_response_logs_status ON access_response_logs (status);",
-        "CREATE INDEX IF NOT EXISTS idx_access_request_logs_website_id ON access_request_logs (website_id);",
-        "CREATE INDEX IF NOT EXISTS idx_access_response_logs_website_id ON access_response_logs (website_id);",
-        "CREATE INDEX IF NOT EXISTS idx_access_request_size_logs_created_at ON access_request_size_logs (created_at);",
-        "CREATE INDEX IF NOT EXISTS idx_access_response_size_logs_created_at ON access_response_size_logs (created_at);",
-        "CREATE INDEX IF NOT EXISTS idx_access_request_size_logs_id ON access_request_size_logs (id);",
-        "CREATE INDEX IF NOT EXISTS idx_access_response_size_logs_id ON access_response_size_logs (id);",
-        "CREATE INDEX IF NOT EXISTS idx_access_request_size_logs_req_id ON access_request_size_logs (request_id);",
-        "CREATE INDEX IF NOT EXISTS idx_access_response_size_logs_resp_id ON access_response_size_logs (response_id);",
-    ]
-});
-
-static CREATE_VIEW_SQLS: LazyLock<Vec<&str>> = LazyLock::new(|| {
-    vec![
-        r#"CREATE OR REPLACE VIEW qps_per_second AS
-            SELECT
-                date_trunc('second', requested_at) AS time,
-                COUNT(req.id) AS total_requests,
-                COUNT(req.id) AS qps  
-            FROM access_request_logs req
-            GROUP BY time
-            ORDER BY time DESC;
-        "#,
-        // 替换原有的 qps_per_5s 视图
-        r#"CREATE OR REPLACE VIEW qps_per_5s AS
-            SELECT
-                to_timestamp(floor(extract(epoch from requested_at) / 5) * 5) AS time,
-                COUNT(req.id) AS total_requests,                
-                COUNT(req.id) / 5.0 AS avg_qps                   
-            FROM access_request_logs req
-            GROUP BY time
-            ORDER BY time DESC;
-        "#,
-        r#"CREATE OR REPLACE VIEW daily_traffic_by_website AS
-        SELECT
-            DATE(req.requested_at) AS day,
-            COALESCE(req.website_id, 'global') AS website_id,
-            COUNT(req.id) AS total_requests,
-            COUNT(resp.id) AS total_responses,
-            COALESCE(SUM(req.body_length), 0) AS total_request_bytes,
-            COALESCE(SUM(resp.body_length), 0) AS total_response_bytes,
-            COALESCE(SUM(req.body_length), 0) + COALESCE(SUM(resp.body_length), 0) AS total_bytes
-        FROM access_request_logs req
-        LEFT JOIN access_response_logs resp ON req.id = resp.id
-        GROUP BY day, req.website_id;
-        "#,
-    ]
-});
+const INIT_SQL: &str = include_str!("../../../../assets/sqls/access_init.sql");
 
 #[async_trait]
 pub trait DatabaseAccessLogsInitializer {
@@ -118,17 +21,7 @@ pub trait DatabaseAccessLogsInitializer {
 #[async_trait]
 impl DatabaseAccessLogsInitializer for Database {
     async fn initialize_access_logs(&self) -> anyhow::Result<()> {
-        let tables = CREATE_TABLE_SQLS.clone();
-        let indexes = CREATE_INDEX_SQLS.clone();
-        let views = CREATE_VIEW_SQLS.clone();
-        for sql in [tables, indexes, views]
-            .iter()
-            .flatten()
-            .copied()
-            .collect::<Vec<_>>()
-        {
-            sqlx::query(sql).execute(&self.pool).await?;
-        }
+        sqlx::raw_sql(INIT_SQL).execute(&self.pool).await?;
 
         Ok(())
     }
@@ -140,6 +33,7 @@ pub trait DatabaseAccessLogsRepository {
     async fn get_qps_per_second(&self, count: usize) -> anyhow::Result<ResponseQPS>;
     async fn get_qps_per_5s(&self, count: usize) -> anyhow::Result<ResponseQPS>;
     async fn get_access_info(&self, in_days: usize) -> anyhow::Result<AccessInfo>;
+    async fn get_today_metrics_info_of_websites(&self) -> anyhow::Result<Vec<TodayMetricsInfoOfWebsite>>;
 }
 
 #[async_trait]
@@ -147,7 +41,7 @@ impl DatabaseAccessLogsRepository for Database {
     async fn get_qps_per_second(&self, count: usize) -> anyhow::Result<ResponseQPS> {
         let max_limit = count;
         let rows = sqlx::query_as::<_, DatabaseQPS>(
-            "SELECT time, total_requests, qps FROM qps_per_secondWHERE time >= NOW() - INTERVAL '1 second' * $1 ORDER BY time DESC LIMIT $1",
+            "SELECT time, total_requests, qps FROM qps_per_second WHERE time >= NOW() - INTERVAL '1 second' * $1 ORDER BY time DESC LIMIT $1",
         )
         .bind(max_limit as i64)
         .fetch_all(&self.pool)
@@ -174,47 +68,33 @@ impl DatabaseAccessLogsRepository for Database {
     async fn get_access_info(&self, in_days: usize) -> anyhow::Result<AccessInfo> {
         // 使用 LEFT JOIN 关联请求表和响应表，一次性获取所有统计指标
         let row = sqlx::query_as::<_, (i64, i64, i64, i64, i64, USize, USize)>(
-            // r#"
-            // SELECT
-            //     COUNT(req.id) AS total_requests,
-            //     COUNT(DISTINCT req.remote_addr) AS total_ips,
-            //     COUNT(resp.id) FILTER (WHERE resp.status >= 400 AND resp.status <= 499) AS e4xx_requests,
-            //     COUNT(resp.id) FILTER (WHERE resp.status >= 500 AND resp.status <= 599) AS e5xx_requests,
-            //     COUNT(req.id) FILTER (WHERE resp.id IS NULL) AS backend_error_requests,
-            //     COALESCE(SUM(req_size.body_length), 0) AS total_requests_size,
-            //     COALESCE(SUM(resp_size.body_length), 0) AS total_response_size
-            // FROM access_request_logs req
-            // LEFT JOIN access_response_logs resp ON req.id = resp.id
-            // LEFT JOIN access_request_size_logs req_size ON req.id = req_size.request_id
-            // LEFT JOIN access_response_size_logs resp_size ON req.id = resp_size.request_id
-            // WHERE req.requested_at > NOW() - INTERVAL '1 day' * $1 AND req_size.created_at > NOW() - INTERVAL '1 day' * $1 AND resp_size.created_at > NOW() - INTERVAL '1 day' * $1
-            // "#,
-            r#"        WITH
-        req_size_agg AS (
-            SELECT request_id, SUM(body_length) AS total_request_size
-            FROM access_request_size_logs
-            WHERE created_at > NOW() - INTERVAL '1 day' * $1
-            GROUP BY request_id
-        ),
-        resp_size_agg AS (
-            SELECT response_id, SUM(body_length) AS total_response_size
-            FROM access_response_size_logs
-            WHERE created_at > NOW() - INTERVAL '1 day' * $1
-            GROUP BY response_id
-        )
-        SELECT
-            COUNT(req.id) AS total_requests,
-            COUNT(DISTINCT req.remote_addr) AS total_ips,
-            COUNT(resp.id) FILTER (WHERE resp.status >= 400 AND resp.status <= 499) AS e4xx_requests,
-            COUNT(resp.id) FILTER (WHERE resp.status >= 500 AND resp.status <= 599) AS e5xx_requests,
-            COUNT(req.id) FILTER (WHERE resp.id IS NULL) AS backend_error_requests,
-            COALESCE(SUM(req_agg.total_request_size), 0)::uint8 AS total_requests_size,
-            COALESCE(SUM(resp_agg.total_response_size), 0)::uint8 AS total_response_size
-        FROM access_request_logs req
-        LEFT JOIN access_response_logs resp ON req.id = resp.id
-        LEFT JOIN req_size_agg req_agg ON req.id = req_agg.request_id
-        LEFT JOIN resp_size_agg resp_agg ON req.id = resp_agg.response_id
-        WHERE req.requested_at > NOW() - INTERVAL '1 day' * $1
+            r#"        
+            WITH
+            req_size_agg AS (
+                SELECT request_id, SUM(body_length) AS total_request_size
+                FROM access_request_size_logs
+                WHERE created_at > NOW() - INTERVAL '1 day' * $1
+                GROUP BY request_id
+            ),
+            resp_size_agg AS (
+                SELECT response_id, SUM(body_length) AS total_response_size
+                FROM access_response_size_logs
+                WHERE created_at > NOW() - INTERVAL '1 day' * $1
+                GROUP BY response_id
+            )
+            SELECT
+                COUNT(req.id) AS total_requests,
+                COUNT(DISTINCT req.remote_addr) AS total_ips,
+                COUNT(resp.id) FILTER (WHERE resp.status >= 400 AND resp.status <= 499) AS e4xx_requests,
+                COUNT(resp.id) FILTER (WHERE resp.status >= 500 AND resp.status <= 599) AS e5xx_requests,
+                COUNT(req.id) FILTER (WHERE resp.id IS NULL) AS backend_error_requests,
+                COALESCE(SUM(req_agg.total_request_size), 0)::uint8 AS total_requests_size,
+                COALESCE(SUM(resp_agg.total_response_size), 0)::uint8 AS total_response_size
+            FROM access_request_logs req
+            LEFT JOIN access_response_logs resp ON req.id = resp.id
+            LEFT JOIN req_size_agg req_agg ON req.id = req_agg.request_id
+            LEFT JOIN resp_size_agg resp_agg ON req.id = resp_agg.response_id
+            WHERE req.requested_at > NOW() - INTERVAL '1 day' * $1
         "#,
         )
         .bind(in_days as i64)  // 绑定天数参数
@@ -231,6 +111,45 @@ impl DatabaseAccessLogsRepository for Database {
             total_request_size: row.5.into(),
             total_response_size: row.6.into(),
         })
+    }
+
+    async fn get_today_metrics_info_of_websites(&self) -> anyhow::Result<Vec<TodayMetricsInfoOfWebsite>> {
+        let rows = sqlx::query_as::<_, TodayMetricsInfoOfWebsite>
+            (r#"
+                WITH
+                req_size_agg AS (
+                    SELECT ars.request_id, SUM(ars.body_length) AS total_request_size
+                    FROM access_request_size_logs ars
+                    INNER JOIN access_request_logs ar ON ars.request_id = ar.id
+                    WHERE ar.requested_at >= CURRENT_DATE AND ar.requested_at < CURRENT_DATE + INTERVAL '1 day'
+                    GROUP BY ars.request_id
+                ),
+                resp_size_agg AS (
+                    SELECT ars.response_id, SUM(ars.body_length) AS total_response_size
+                    FROM access_response_size_logs ars
+                    INNER JOIN access_response_logs ar ON ars.response_id = ar.id
+                    WHERE ar.responsed_at >= CURRENT_DATE AND ar.responsed_at < CURRENT_DATE + INTERVAL '1 day'
+                    GROUP BY ars.response_id
+                )
+                SELECT 
+                    req.website_id as website_id,
+                    COUNT(req.id) AS total_requests,
+                    COUNT(DISTINCT req.remote_addr) AS total_ips,
+                    COUNT(resp.id) AS total_responses,
+                    COUNT(resp.id) FILTER (WHERE resp.status >= 400 AND resp.status <= 499) AS e4xx_requests,
+                    COUNT(resp.id) FILTER (WHERE resp.status >= 500 AND resp.status <= 599) AS e5xx_requests,
+                    COUNT(req.id) FILTER (WHERE resp.id IS NULL) AS backend_error_requests,
+                    COALESCE(SUM(req_agg.total_request_size), 0)::uint8 AS total_requests_size,
+                    COALESCE(SUM(resp_agg.total_response_size), 0)::uint8 AS total_response_size
+                FROM access_request_logs req
+                LEFT JOIN access_response_logs resp ON req.id = resp.id
+                LEFT JOIN req_size_agg req_agg ON req.id = req_agg.request_id
+                LEFT JOIN resp_size_agg resp_agg ON req.id = resp_agg.response_id
+                WHERE req.requested_at >= CURRENT_DATE AND req.requested_at < CURRENT_DATE + INTERVAL '1 day'
+                GROUP BY req.website_id
+                "#
+            ).fetch_all(&self.pool).await?;
+        Ok(rows)
     }
 }
 

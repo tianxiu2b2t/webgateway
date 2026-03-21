@@ -1,6 +1,10 @@
 import { gotWithAuth } from '../constant';
 import type { APIResponse } from '../types';
-import type { AccessInfo, ResponseQPS } from '../types/access';
+import type {
+    AccessInfo,
+    ResponseQPS,
+    TodayMetricsInfoOfWebsites,
+} from '../types/access';
 
 const prefix = 'access';
 
@@ -24,5 +28,12 @@ export async function get_access_info(in_days: number = 1) {
             },
         })
     ).json()) as APIResponse<AccessInfo>;
+    return resp.data;
+}
+
+export async function get_today_metrics_info_of_websites() {
+    const resp = (await (
+        await gotWithAuth.get(`${prefix}/metrics/websites`)
+    ).json()) as APIResponse<TodayMetricsInfoOfWebsites[]>;
     return resp.data;
 }

@@ -347,3 +347,33 @@ pub struct WebsiteAccessInfo {
     pub total_requests_size: usize,
     pub total_response_size: usize,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TodayMetricsInfoOfWebsite {
+    pub website_id: Option<ObjectId>,
+    pub total_requests: usize,
+    pub total_responses: usize,
+    pub total_ips: usize,
+    pub backend_error_requests: usize,
+    pub e4xx_requests: usize,
+    pub e5xx_requests: usize,
+    pub total_requests_size: usize,
+    pub total_response_size: usize,
+}
+
+impl<'r> FromRow<'r, PgRow> for TodayMetricsInfoOfWebsite {
+    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            website_id: row.try_get("website_id")?,
+            total_requests: row.try_get::<i64, _>("total_requests")? as usize,
+            total_responses: row.try_get::<i64, _>("total_responses")? as usize,
+            total_ips: row.try_get::<i64, _>("total_ips")? as usize,
+            backend_error_requests: row.try_get::<i64, _>("backend_error_requests")? as usize,
+            e4xx_requests: row.try_get::<i64, _>("e4xx_requests")? as usize,
+            e5xx_requests: row.try_get::<i64, _>("e5xx_requests")? as usize,
+            total_requests_size: row.try_get::<USize, _>("total_requests_size")?.into(),
+            total_response_size: row.try_get::<USize, _>("total_response_size")?.into(),
+        }
+        )
+    }
+}
