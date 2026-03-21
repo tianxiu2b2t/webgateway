@@ -62,18 +62,28 @@ import InputEdit from '../../components/InputEdit.vue';
 import Panel from '../../components/Panel.vue';
 import type { Website } from '../../types/websites';
 import { getWebsites } from '../../apis/websites';
-import { addDialog } from '../../plugins/dialog';
+import { addDialog, listen, unlisten } from '../../plugins/dialog';
 import AddWebsite from '../../components/websites/AddWebsite.vue';
 import SvgIcon from '../../components/SvgIcon.vue';
 import PanelViewData from '../../components/PanelViewData.vue';
 const websites = ref<Website[]>([]);
 
-onMounted(async () => {
+async function refresh() {
     websites.value = await getWebsites();
-});
+}
+
+onMounted(refresh);
 
 function toggleAddWebsite() {
-    addDialog(AddWebsite);
+    const id = addDialog(AddWebsite);
+    const closeId = listen(
+        'close',
+        async () => {
+            await refresh();
+            unlisten(closeId);
+        },
+        id,
+    );
 }
 </script>
 
@@ -111,7 +121,7 @@ function toggleAddWebsite() {
     white-space: nowrap;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 800px) {
     .overview-side {
         flex-wrap: wrap;
         width: 100%;

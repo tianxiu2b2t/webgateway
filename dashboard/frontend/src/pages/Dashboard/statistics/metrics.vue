@@ -1,53 +1,109 @@
 <template>
     <div class="metrics-root">
-        <div class="metrics-overview">
-            <Panel class="metrics-view">
-                <PanelViewData>
-                    <template #title> 请求次数 </template>
-                    <template #value>
-                        <DataView
-                            :data="data?.total_requests || 0"
-                            :format="formatNumber"
-                        ></DataView>
-                    </template>
-                </PanelViewData>
-                <div class="spt-line"></div>
-                <PanelViewData>
-                    <template #title> 独立 IP </template>
-                    <template #value>
-                        <DataView
-                            :data="data?.total_ips || 0"
-                            :format="formatNumber"
-                        ></DataView>
-                    </template>
-                </PanelViewData>
-            </Panel>
-            <Panel class="metrics-view">
-                <PanelViewData>
-                    <template #title> 后端错误数 </template>
-                    <template #value>
-                        <DataView
-                            :data="data?.backend_error_requests || 0"
-                            :format="formatNumber"
-                        ></DataView>
-                    </template>
-                </PanelViewData>
-                <div class="spt-line"></div>
-                <PanelViewData>
-                    <template #title> 后端错误率 </template>
-                    <template #value>
-                        {{
-                            (
-                                ((data?.total_requests || 0) == 0
-                                    ? 0
-                                    : (data?.backend_error_requests || 0) /
-                                      (data?.total_requests || 0)) * 100
-                            ).toFixed(2)
-                        }}%
-                    </template>
-                </PanelViewData>
-            </Panel>
-            <Panel>
+        <div class="metrics-info">
+            <div class="metrics-overview">
+                <Panel class="metrics-view data-2">
+                    <PanelViewData>
+                        <template #title> 请求次数 </template>
+                        <template #value>
+                            <DataView
+                                :data="data?.total_requests || 0"
+                                :format="formatNumber"
+                            ></DataView>
+                        </template>
+                    </PanelViewData>
+                    <div class="spt-line"></div>
+                    <PanelViewData>
+                        <template #title> 独立 IP </template>
+                        <template #value>
+                            <DataView
+                                :data="data?.total_ips || 0"
+                                :format="formatNumber"
+                            ></DataView>
+                        </template>
+                    </PanelViewData>
+                </Panel>
+                <Panel class="metrics-view data-2">
+                    <PanelViewData>
+                        <template #title> 后端错误数 </template>
+                        <template #value>
+                            <DataView
+                                :data="data?.backend_error_requests || 0"
+                                :format="formatNumber"
+                            ></DataView>
+                        </template>
+                    </PanelViewData>
+                    <div class="spt-line"></div>
+                    <PanelViewData>
+                        <template #title> 后端错误率 </template>
+                        <template #value>
+                            {{
+                                (
+                                    ((data?.total_requests || 0) == 0
+                                        ? 0
+                                        : (data?.backend_error_requests || 0) /
+                                          (data?.total_requests || 0)) * 100
+                                ).toFixed(2)
+                            }}%
+                        </template>
+                    </PanelViewData>
+                </Panel>
+            </div>
+            <div class="metrics-overview">
+                <Panel class="metrics-view data-2">
+                    <PanelViewData>
+                        <template #title> 4xx 错误数 </template>
+                        <template #value>
+                            <DataView
+                                :data="data?.e4xx_requests || 0"
+                                :format="formatNumber"
+                            ></DataView>
+                        </template>
+                    </PanelViewData>
+                    <div class="spt-line"></div>
+                    <PanelViewData>
+                        <template #title> 4xx 错误率 </template>
+                        <template #value>
+                            {{
+                                (
+                                    ((data?.total_requests || 0) == 0
+                                        ? 0
+                                        : (data?.e4xx_requests || 0) /
+                                          (data?.total_requests || 0)) * 100
+                                ).toFixed(2)
+                            }}%
+                        </template>
+                    </PanelViewData>
+                </Panel>
+                <Panel class="metrics-view data-2">
+                    <PanelViewData>
+                        <template #title> 5xx 错误数 </template>
+                        <template #value>
+                            <DataView
+                                :data="data?.e5xx_requests || 0"
+                                :format="formatNumber"
+                            ></DataView>
+                        </template>
+                    </PanelViewData>
+                    <div class="spt-line"></div>
+                    <PanelViewData>
+                        <template #title> 5xx 错误率 </template>
+                        <template #value>
+                            {{
+                                (
+                                    ((data?.total_requests || 0) == 0
+                                        ? 0
+                                        : (data?.e5xx_requests || 0) /
+                                          (data?.total_requests || 0)) * 100
+                                ).toFixed(2)
+                            }}%
+                        </template>
+                    </PanelViewData>
+                </Panel>
+            </div>
+        </div>
+        <div class="metrics-bytes">
+            <Panel class="metrics-view data-1">
                 <PanelViewData>
                     <template #title> 请求流量 </template>
                     <template #value>
@@ -58,59 +114,7 @@
                     </template>
                 </PanelViewData>
             </Panel>
-        </div>
-        <div class="metrics-overview">
-            <Panel class="metrics-view">
-                <PanelViewData>
-                    <template #title> 4xx 错误数 </template>
-                    <template #value>
-                        <DataView
-                            :data="data?.e4xx_requests || 0"
-                            :format="formatNumber"
-                        ></DataView>
-                    </template>
-                </PanelViewData>
-                <div class="spt-line"></div>
-                <PanelViewData>
-                    <template #title> 4xx 错误率 </template>
-                    <template #value>
-                        {{
-                            (
-                                ((data?.total_requests || 0) == 0
-                                    ? 0
-                                    : (data?.e4xx_requests || 0) /
-                                      (data?.total_requests || 0)) * 100
-                            ).toFixed(2)
-                        }}%
-                    </template>
-                </PanelViewData>
-            </Panel>
-            <Panel class="metrics-view">
-                <PanelViewData>
-                    <template #title> 5xx 错误数 </template>
-                    <template #value>
-                        <DataView
-                            :data="data?.e5xx_requests || 0"
-                            :format="formatNumber"
-                        ></DataView>
-                    </template>
-                </PanelViewData>
-                <div class="spt-line"></div>
-                <PanelViewData>
-                    <template #title> 5xx 错误率 </template>
-                    <template #value>
-                        {{
-                            (
-                                ((data?.total_requests || 0) == 0
-                                    ? 0
-                                    : (data?.e5xx_requests || 0) /
-                                      (data?.total_requests || 0)) * 100
-                            ).toFixed(2)
-                        }}%
-                    </template>
-                </PanelViewData>
-            </Panel>
-            <Panel>
+            <Panel class="metrics-view data-1">
                 <PanelViewData>
                     <template #title> 响应流量 </template>
                     <template #value>
@@ -187,12 +191,20 @@ onUnmounted(() => {
     min-width: 0%;
     width: auto;
 }
+.panel.data-2 {
+    min-width: 260px;
+    width: auto;
+}
+.panel.data-1 {
+    min-width: 200px;
+    width: auto;
+}
 .metrics-overview > div {
     flex: 1;
 }
-.metrics-overview > div:last-child {
+/* .metrics-overview > div:last-child {
     flex: 0.5;
-}
+} */
 .metrics-overview {
     display: flex;
     width: auto;
@@ -206,5 +218,32 @@ onUnmounted(() => {
 }
 .metrics-root {
     width: 100%;
+    display: flex;
+    gap: 16px;
+}
+.metrics-info {
+    width: 100%;
+}
+.metrics-bytes {
+    display: flex;
+    width: auto;
+    min-width: auto;
+    gap: 16px;
+    flex-wrap: nowrap;
+    flex-direction: column;
+}
+.metrics-bytes > div {
+    flex: 1;
+}
+
+@media (max-width: 1020px) {
+    .metrics-root {
+        flex-wrap: wrap;
+    }
+    .metrics-bytes {
+        width: 100%;
+        flex-wrap: wrap;
+        flex-direction: row;
+    }
 }
 </style>

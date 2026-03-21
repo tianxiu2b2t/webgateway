@@ -98,7 +98,7 @@ async def main():
     for file in files:
         tqdm.tqdm.write(f"{file.name} {tqdm.tqdm.format_sizeof(file.size)}")
 
-    with tqdm.tqdm(total=sum(file.size for file in files), unit="B", unit_scale=True, unit_divisor=1024) as pbar:
+    with tqdm.tqdm(total=sum(file.size for file in files), unit="B", unit_scale=True, unit_divisor=1024, interval=0.5) as pbar:
         await asyncio.gather(
             *[download_file(file, pbar) for file in files]
         )

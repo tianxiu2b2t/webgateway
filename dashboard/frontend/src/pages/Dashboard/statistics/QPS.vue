@@ -4,8 +4,12 @@
             <span>实时 QPS</span>
             <span>{{ data[data.length - 1]?.count || 0 }}</span>
         </div>
-        <div class="value">
-            <vchart :option="option" style="width: 100%; height: 100%" />
+        <div class="value" ref="qps_chart">
+            <vchart
+                :option="option"
+                style="width: 100%; height: 100%"
+                :autoresize="true"
+            />
         </div>
     </Panel>
 </template>
@@ -17,18 +21,21 @@ import {
     onMounted,
     onUnmounted,
     ref,
+    watch,
 } from 'vue';
 import Panel from '../../../components/Panel.vue';
 import { get_qps } from '../../../apis/access';
-import type { QPS } from '../../../types/access';
+import { type ResponseQPS, type QPS } from '../../../types/access';
 import { isDark } from '../../../theme';
 import { darkMainColor, lightMainColor } from '../../../constant';
+import { debounce } from 'vue-debounce';
 
 // 异步加载 ECharts 组件
 const vchart = defineAsyncComponent(() => import('vue-echarts'));
 
 // 响应式数据：存储已补全的 QPS 时间序列
 const data = ref<QPS[]>([]);
+const respData = ref<ResponseQPS>();
 
 // ECharts 配置项（基于 data 计算）
 const option = computed(() => ({
@@ -100,41 +107,55 @@ const option = computed(() => ({
 const task = ref<ReturnType<typeof setTimeout>>();
 
 // 组件属性：显示的数据点数量（默认 60 个，对应 5 分钟）
-const props = defineProps({
-    count: {
-        type: Number,
-        default: 35,
-    },
+const qps_chart = ref<HTMLDivElement>();
+const count = ref(calcCount());
+
+const observer = new ResizeObserver(() => {
+    count.value = calcCount();
+    // setData();
 });
+const INTERVAL_MS = 5000;
+const OFFSET_MS = 2500;
+function calcCount() {
+    return Math.min(
+        Math.floor(
+            ((qps_chart.value?.getBoundingClientRect().width || 0) / 7.5 ||
+                60) / 5,
+        ) * 5,
+        60,
+    );
+}
 
-// 常量：时间窗口对齐参数（与后端约定一致）
-const INTERVAL_MS = 5000; // 5 秒一个点
-const OFFSET_MS = 2500; // 偏移 2.5 秒，使时间戳落在每个 5 秒区间的中间
+watch(() => [respData.value, count.value], debounce(setData, 500));
 
-/**
- * 刷新 QPS 数据：从 API 获取原始数据，补全缺失的时间点，更新 data
- */
+function setData() {
+    const resp = respData.value;
+    if (!resp) return;
+    const currentTime = new Date(
+        Math.floor(+new Date(resp.current_time) / 5000) * 5000 - 5000,
+    );
+    const qps: QPS[] = [];
+    const mapping: Map<number, number> = new Map();
+    resp.data.forEach((item) => {
+        mapping.set(+new Date(item.time), item.count);
+    });
+    for (let i = 0; i < count.value; i++) {
+        const t = new Date(currentTime.getTime() - i * INTERVAL_MS);
+        qps.push({
+            time: t,
+            count: mapping.get(+t) || 0,
+        });
+    }
+    data.value = qps.reverse();
+}
+
 async function refreshQPS() {
     try {
-        const resp = (await get_qps()).data;
-        const currentTime = new Date(
-            Math.floor(+new Date(resp.current_time) / 5000) * 5000 - 5000,
-        );
-        const qps: QPS[] = [];
-        const mapping: Map<number, number> = new Map();
-        resp.data.forEach((item) => {
-            mapping.set(+new Date(item.time), item.count);
-        });
-        for (let i = 0; i < props.count; i++) {
-            const t = new Date(currentTime.getTime() - i * INTERVAL_MS);
-            qps.push({
-                time: t,
-                count: mapping.get(+t) || 0,
-            });
-        }
-        data.value = qps.reverse();
+        const resp = (await get_qps(undefined)).data;
+        respData.value = resp;
+        setData();
     } catch (error) {
-        console.error('获取 QPS 数据失败', error);
+        // console.error('获取 QPS 数据失败', error);
         // 失败时不更新 data，保留旧数据
     }
 
@@ -151,11 +172,13 @@ async function refreshQPS() {
 // 组件挂载后立即开始刷新
 onMounted(() => {
     refreshQPS();
+    observer.observe(qps_chart.value!);
 });
 
 // 组件卸载时清除定时器
 onUnmounted(() => {
     clearTimeout(task.value);
+    observer.disconnect();
 });
 </script>
 
@@ -163,7 +186,8 @@ onUnmounted(() => {
 /* 确保 Panel 有足够的高度，否则图表可能不显示 */
 .panel.qps-root {
     min-width: 0%;
-    width: 412px;
+    min-width: 322px;
+    /* width: 100%; */
     height: auto; /* 根据布局调整 */
 }
 .qps-root .title {
@@ -177,5 +201,10 @@ onUnmounted(() => {
 .qps-root .value {
     margin-top: 10px;
     height: calc(100% - 34px);
+}
+@media (max-width: 1360px) {
+    .panel.qps-root {
+        width: 100%;
+    }
 }
 </style>

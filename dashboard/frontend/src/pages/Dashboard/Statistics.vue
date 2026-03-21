@@ -40,8 +40,12 @@ const query = computed(() => useRoute().query);
 <style>
 .statistics-overview {
     display: flex;
-    flex-wrap: wrap;
     gap: 24px;
     flex-wrap: nowrap;
+}
+@media (max-width: 1360px) {
+    .statistics-overview {
+        flex-wrap: wrap;
+    }
 }
 </style>

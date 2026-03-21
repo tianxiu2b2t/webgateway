@@ -89,6 +89,10 @@ function cancel() {
     emit('close');
 }
 async function submit() {
+    if (state.domains.length == 0 && state.ports.length == 0) {
+        addPresentation('请至少填写一个域名或端口', 'alert');
+        return;
+    }
     const data: WebsiteCreateRequest = {
         ports: state.ports.map((v) => parseInt(v)),
         hosts: state.domains,
