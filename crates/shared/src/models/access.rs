@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de};
 use simple_shared::objectid::ObjectId;
 use sqlx::{
     FromRow, Row,
@@ -239,39 +239,39 @@ pub struct QueryQPS {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(try_from = "usize")]
-pub enum QueryAccessInfoType {
+pub enum QueryAccessInfoDays {
     #[default]
     Day = 1,
     SevenDays = 7,
     ThirtyDays = 30,
 }
 
-impl TryFrom<usize> for QueryAccessInfoType {
+impl TryFrom<usize> for QueryAccessInfoDays {
     type Error = &'static str;
 
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         match value {
-            1 => Ok(QueryAccessInfoType::Day),
-            7 => Ok(QueryAccessInfoType::SevenDays),
-            30 => Ok(QueryAccessInfoType::ThirtyDays),
-            _ => Err("invalid value for QueryAccessInfoType, expected 1, 7, or 30"),
+            1 => Ok(QueryAccessInfoDays::Day),
+            7 => Ok(QueryAccessInfoDays::SevenDays),
+            30 => Ok(QueryAccessInfoDays::ThirtyDays),
+            _ => Err("invalid value for QueryAccessInfoDays, expected 1, 7, or 30"),
         }
     }
 }
 
-impl From<QueryAccessInfoType> for usize {
-    fn from(value: QueryAccessInfoType) -> Self {
+impl From<QueryAccessInfoDays> for usize {
+    fn from(value: QueryAccessInfoDays) -> Self {
         match value {
-            QueryAccessInfoType::Day => 1,
-            QueryAccessInfoType::SevenDays => 7,
-            QueryAccessInfoType::ThirtyDays => 30,
+            QueryAccessInfoDays::Day => 1,
+            QueryAccessInfoDays::SevenDays => 7,
+            QueryAccessInfoDays::ThirtyDays => 30,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct QueryAccessInfo {
-    pub in_days: QueryAccessInfoType,
+    pub in_days: QueryAccessInfoDays,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -376,4 +376,50 @@ impl<'r> FromRow<'r, PgRow> for TodayMetricsInfoOfWebsite {
         }
         )
     }
+}
+
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub enum QueryAccessMapType {
+    #[default]
+    Global,
+    China,
+}
+
+impl<'de> Deserialize<'de> for QueryAccessMapType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(de::Error::custom)
+    }
+}
+
+impl std::fmt::Display for QueryAccessMapType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            QueryAccessMapType::Global => write!(f, "global"),
+            QueryAccessMapType::China => write!(f, "china"),
+        }
+    }
+}
+
+impl FromStr for QueryAccessMapType {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "global" => Ok(QueryAccessMapType::Global),
+            "china" => Ok(QueryAccessMapType::China),
+            _ => Err("invalid value for QueryAccessMapType, expected 'global' or 'china'"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct QueryAccessMap {
+    pub in_days: QueryAccessInfoDays,
+    #[serde(rename = "type")]
+    pub map_type: QueryAccessMapType,
 }

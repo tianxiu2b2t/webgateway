@@ -31,3 +31,5 @@ export interface ResponseQPS {
     data: DataQPS[];
     current_time: string;
 }
+
+export type MapType = 'global' | 'china';

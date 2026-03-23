@@ -2,6 +2,7 @@ import { gotWithAuth } from '../constant';
 import type { APIResponse } from '../types';
 import type {
     AccessInfo,
+    MapType,
     ResponseQPS,
     TodayMetricsInfoOfWebsites,
 } from '../types/access';
@@ -35,5 +36,20 @@ export async function get_today_metrics_info_of_websites() {
     const resp = (await (
         await gotWithAuth.get(`${prefix}/metrics/websites`)
     ).json()) as APIResponse<TodayMetricsInfoOfWebsites[]>;
+    return resp.data;
+}
+
+export async function get_access_map(
+    in_days: number = 1,
+    type: MapType = 'global',
+) {
+    const resp = (await (
+        await gotWithAuth.get(`${prefix}/access_map`, {
+            searchParams: {
+                in_days,
+                type,
+            },
+        })
+    ).json()) as APIResponse<any>;
     return resp.data;
 }
