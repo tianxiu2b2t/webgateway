@@ -9,6 +9,6 @@
 .vscode
 node_modules
 .python-version
-**/assets/ipdb/
+**/backend/assets/ipdb/
 ipdb/data
 ipdb/test

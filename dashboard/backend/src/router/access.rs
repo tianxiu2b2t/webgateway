@@ -59,6 +59,7 @@ pub async fn access_map(Query(query): Query<QueryAccessMap>) -> APIResponse<Hash
                         }
                     },
                     shared::models::access::QueryAccessMapType::China => {
+                        if let Some(country) = info.country && country == "CN" {
                         match info.city {
                             Some(city) => {
                                 *result.entry(city).or_insert(0) += count;
@@ -66,6 +67,7 @@ pub async fn access_map(Query(query): Query<QueryAccessMap>) -> APIResponse<Hash
                             None => {
                                 *result.entry("Unknown".to_string()).or_insert(0) += count;
                             }
+                        }
                         }
                     }
                 }

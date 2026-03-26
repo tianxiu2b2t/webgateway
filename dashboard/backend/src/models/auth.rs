@@ -16,6 +16,12 @@ pub struct AuthPostBody {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AuthToBindQRCodePostBody {
+    pub totp: String,
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuthResponse {
     pub token: String,
     pub exp_at: DateTime<Utc>,

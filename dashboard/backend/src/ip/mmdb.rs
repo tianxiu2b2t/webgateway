@@ -51,7 +51,7 @@ impl CountryInstance {
 
     pub fn lookup(&self, ip: IpAddr) -> anyhow::Result<LookupResult> {
         let result = self.reader.lookup(ip).map_err(|e| anyhow::anyhow!(format!("{e:?}")))?;
-        println!("Country: {ip:?} {:?}", result);
+        // println!("Country: {ip:?} {:?}", result);
         let iso_code = result.country.and_then(|v| v.iso_code.map(|v| v.to_string()));
         let city = result.continent.and_then(|v| v.code.map(|v| v.to_string()));
         Ok(LookupResult { 

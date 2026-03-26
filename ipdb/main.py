@@ -35,6 +35,12 @@ MMDB_CHINA_FILTERS = (
     "country-lite.mmdb",
     "version"
 )
+
+# https://github.com/nmgliangwei/qqwry.ipdb/releases/tag/2026-03-18
+
+CZ88_REPO_OWNER = "nmgliangwei"
+CZ88_REPO_NAME = "qqwry.ipdb"
+CZ88_FILTERS = ("qqwry-raw.ipdb",)
 GITHUB = githubkit.GitHub(
     os.environ.get("GITHUB_TOKEN", "")
 )
@@ -79,6 +85,19 @@ async def download_ip2region_files():
         )
         for file in files if file.name.lower() not in IP2REGION_FILTERS and file.download_url
     ], key=lambda x: x.name)
+
+async def download_cz88_files():
+    resp = (await GITHUB.rest.repos.async_get_latest_release(
+        owner=CZ88_REPO_OWNER, repo=CZ88_REPO_NAME
+    )).parsed_data
+    return [
+        File(
+            download_url=asset.browser_download_url,
+            name=asset.name,
+            size=asset.size,
+        )
+        for asset in resp.assets if asset.name.lower() not in CZ88_FILTERS
+    ]
 
 async def download_file(file: File, pbar: tqdm.tqdm):
     with open(DOWNLOAD_DIR / file.name, "wb") as f:
@@ -146,13 +165,14 @@ async def main():
     mmdb_files = await list_mmdb_files()
     #ip2region_files = await download_ip2region_files()
     mmdb_china_files = await get_mmdb_china_files()
+    cz88_files = await download_cz88_files()
 
-    files = mmdb_files + mmdb_china_files
+    files = mmdb_files + mmdb_china_files + cz88_files
     # 使用 tqdm.write 避免干扰进度条
     for file in files:
         tqdm.tqdm.write(f"{file.name} {tqdm.tqdm.format_sizeof(file.size)} {file.download_url}")
 
-    with tqdm.tqdm(total=sum(file.size for file in files), unit="B", unit_scale=True, unit_divisor=1024, mininterval=0.5) as pbar:
+    with tqdm.tqdm(total=sum(file.size for file in files), unit="B", unit_scale=True, unit_divisor=1024, mininterval=1) as pbar:
         await asyncio.gather(
             *[download_file(file, pbar) for file in files]
         )
@@ -162,12 +182,14 @@ async def main():
         if file.name.endswith(".tar.gz"):
             extract_mmdb(file, ASSETS)
         # untar_file(file, ASSETS)
-        if file.name.endswith(".mmdb"):
+        elif file.name.endswith(".mmdb") or file.name.endswith(".ipdb"):
             # copy to
             with open(file, "rb") as r, open(ASSETS / file.name, "wb") as w:
                 while (chunk := r.read(16384)):
                     w.write(chunk)
-            
+            with open(file, "rb") as r, open(ASSETS / file.name, "wb") as w:
+                while (chunk := r.read(16384)):
+                    w.write(chunk)
             
 
     # cp to dashboard backend

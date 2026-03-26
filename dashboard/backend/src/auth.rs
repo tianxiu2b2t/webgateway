@@ -14,7 +14,7 @@ use crate::{
     database::auth::Authentication,
     foundation::RemoteAddr,
     models::{
-        auth::{AuthJWTInfoExtract, AuthPostBody, AuthQueryInfo, AuthResponse, AuthResponseInfo},
+        auth::{AuthJWTInfoExtract, AuthPostBody, AuthQueryInfo, AuthResponse, AuthResponseInfo, AuthToBindQRCodePostBody},
         log::LogAddr,
     },
     response::APIResponse,
@@ -116,6 +116,22 @@ pub async fn middle_refresh_token(
         );
     }
     resp
+}
+
+pub async fn get_bind_qrcode(
+    AuthJWTInfoExtract(info): AuthJWTInfoExtract,
+    RemoteAddr(addr): RemoteAddr,
+    Json(body): Json<AuthToBindQRCodePostBody>,
+) -> APIResponse<()> {
+    // let res = get_database()
+    //     .bind_totp(&info.user.username, &body.secret, &LogAddr::from(addr))
+    //     .await;
+    // match res {
+    //     Ok(_) => APIResponse::ok(()),
+    //     Err(e) => APIResponse::error(None, 500, e.to_string()),
+    // }
+
+    APIResponse::ok(())
 }
 
 pub fn get_router() -> Router {

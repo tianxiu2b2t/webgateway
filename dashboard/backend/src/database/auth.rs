@@ -27,37 +27,44 @@ pub trait Authentication {
     async fn get_first_user(&self) -> Result<DatabaseAuthentication>;
     async fn verify_totp(&self, username: &str, totp: &str, addr: &LogAddr) -> Result<bool>;
     async fn get_user_from_id(&self, id: &ObjectId) -> Result<DatabaseAuthentication>;
+
 }
+
+const INIT_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    totp_secret TEXT NOT NULL,
+    jwt_secret TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_login TIMESTAMPTZ,
+    last_ip TEXT,
+    addresses TEXT[] NOT NULL DEFAULT '{}',
+    UNIQUE (username)
+);
+
+CREATE TABLE IF NOT EXISTS users_client_secrets (
+    user_id TEXT NOT NULL REFERENCES users (id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    secret TEXT NOT NULL,
+    last_login TIMESTAMPTZ,
+    last_ip TEXT,
+    addresses TEXT[] NOT NULL DEFAULT '{}',
+    UNIQUE (user_id, secret)
+);
+
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_idx ON users (LOWER(username));
+CREATE INDEX IF NOT EXISTS users_client_secrets_user_id_idx ON users_client_secrets (user_id);
+CREATE INDEX IF NOT EXISTS users_client_secrets_secret_idx ON users_client_secrets (secret);
+"#;
 
 #[async_trait::async_trait]
 impl Authentication for Database {
     async fn init_authentication(&self) -> Result<()> {
-        // 创建表
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY,
-                username TEXT NOT NULL,
-                totp_secret TEXT NOT NULL,
-                jwt_secret TEXT NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                last_login TIMESTAMPTZ,
-                last_ip TEXT,
-                addresses TEXT[] NOT NULL DEFAULT '{}',
-                bound bool NOT NULL DEFAULT false
-            );
-            "#,
-        )
-        .execute(&self.pool)
-        .await?;
-
-        // 唯一索引
-        sqlx::query(
-            r#"CREATE UNIQUE INDEX IF NOT EXISTS users_username_idx ON users (LOWER(username));"#,
-        )
-        .execute(&self.pool)
-        .await?;
+        // 初始化用户表
+        sqlx::raw_sql(INIT_SQL).execute(&self.pool).await?;
 
         // 检查是否存在用户，若无则创建默认管理员
         let _ = match self.get_first_user().await {
