@@ -217,7 +217,7 @@ pub async fn verify_bind_qrcode(
         Ok(res) => res,
         Err(e) => return APIResponse::error(None, 500, e.to_string()),
     };
-    println!("totp code: {}, {}", totp_code, body.totp);
+    // println!("totp code: {}, {}", totp_code, body.totp);
     let result = totp_code.eq(&body.totp);
     let _ = get_database()
         .add_web_log(

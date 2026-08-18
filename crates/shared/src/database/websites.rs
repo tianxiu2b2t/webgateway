@@ -54,7 +54,7 @@ impl DatabaseWebsiteRepository for Database {
         let rows = sqlx::query_as::<_, DatabaseWebsite>("SELECT * FROM websites;")
             .fetch_all(&self.pool)
             .await?;
-        println!("Got {rows:?} websites");
+        // println!("Got {rows:?} websites");
         Ok(rows)
     }
 

@@ -6,7 +6,7 @@ use sqlx::{
     Pool, Postgres, Row,
     postgres::{PgListener, PgNotification, PgPoolOptions},
 };
-use tracing::event;
+use tracing::{Level, event};
 
 use crate::database::{
     access::DatabaseAccessLogsInitializer, certificate::DatabaseCertificateInitializer,
@@ -109,7 +109,7 @@ impl Database {
             let mut stream = match listener_result {
                 Ok(s) => s,
                 Err(e) => {
-                    eprintln!("监听频道 {} 失败: {:?}，5秒后重试", channel, e);
+                    event!(Level::ERROR, "Failed to listen notification channel {}, error: {:?}, retry in 5s", channel, e);
                     tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                     continue;
                 }
@@ -120,18 +120,18 @@ impl Database {
             while let Some(notification_result) = stream.next().await {
                 match notification_result {
                     Ok(notification) => {
-                        println!("收到通知: {:?}", notification);
+                        event!(Level::INFO, "Recvied notification: {:?}", notification);
                         // 调用用户提供的处理函数
                         handler(notification).await;
                     }
                     Err(e) => {
-                        eprintln!("接收通知时出错: {:?}，继续等待下一个", e);
+                        event!(Level::ERROR, "Failed to receive notification: {:?}, wait for next notification", e);
                         // 这里不退出循环，继续接收后续通知（如果流仍然有效）
                     }
                 }
             }
             // 流结束（通常因为连接断开），稍后重连
-            eprintln!("通知流已结束，重新连接频道 {}", channel);
+            event!(Level::ERROR, "Currently notification channel has been closed: {}", channel);
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         }
     }
@@ -190,7 +190,7 @@ pub async fn init_database(url: &str, max_connections: u32) -> anyhow::Result<()
                 "Failed to connect to database: {:?}",
                 e
             );
-            eprintln!("Failed to connect to database url: {:?}", url);
+            // eprintln!("Failed to connect to database url: {:?}", url);
             return Err(e.into());
         }
     };

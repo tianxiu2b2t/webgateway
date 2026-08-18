@@ -12,3 +12,4 @@ node_modules
 **/backend/assets/ipdb/
 ipdb/data
 ipdb/test
+dev/environment

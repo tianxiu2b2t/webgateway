@@ -33,7 +33,7 @@ pub enum StatisticsIncomingType {
 
 #[derive(Debug)]
 pub struct StatisticsIncoming {
-    inner: Incoming,
+    pub inner: Incoming,
     id: ObjectId,
     method: StatisticsIncomingType,
     total_size: usize,

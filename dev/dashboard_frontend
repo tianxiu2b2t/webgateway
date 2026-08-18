@@ -4,6 +4,13 @@ current_dir=$(basename "$PWD")
 if [[ "$current_dir" == "dev" ]]; then
     cd ..
 fi
+
+if [ -f "dev/environment" ]; then
+    source dev/environment
+else
+    echo "warn: not found environment file, skip it..."
+fi
+
 cd dashboard/frontend
 
 yarn vite dev

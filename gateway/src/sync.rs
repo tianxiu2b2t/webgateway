@@ -5,7 +5,7 @@ use shared::database::get_database;
 use tracing::{Level, event};
 
 use crate::{
-    proxy::listen,
+    upstream::listen,
     sync::{
         cert::{AutoCertificate, sync_certificates},
         websites::sync_websites,
@@ -44,9 +44,11 @@ pub async fn main() -> anyhow::Result<()> {
                 match sync_websites().await {
                     Ok(ports) => {
                         for port in ports {
-                            let r = listen(port).await;
-                            if let Err(e) = r {
-                                event!(Level::ERROR, "Failed to listen port {port}: {e}");
+                            match listen(port).await {
+                                Err(e) => event!(Level::ERROR, "Failed to listen port {port}: {e}"),
+                                Ok(()) => {
+                                    event!(Level::INFO, "Listen port {port}");
+                                }
                             }
                         }
                     }

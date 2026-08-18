@@ -22,7 +22,7 @@ dependencies = [
  "opentelemetry_sdk",
  "pem",
  "prometheus",
- "rand 0.10.1",
+ "rand 0.10.2",
  "rcgen",
  "regex",
  "reqwest 0.13.4",
@@ -772,7 +772,7 @@ dependencies = [
  "ipdb",
  "jsonwebtoken",
  "qrcode",
- "rand 0.10.1",
+ "rand 0.10.2",
  "serde",
  "serde_json",
  "shared",
@@ -1161,6 +1161,7 @@ dependencies = [
  "http-body",
  "http-body-util",
  "hyper",
+ "hyper-tungstenite",
  "hyper-util",
  "protocols",
  "regex",
@@ -1169,6 +1170,7 @@ dependencies = [
  "shared",
  "tokio",
  "tokio-rustls",
+ "tokio-tungstenite",
  "toml 1.1.2+spec-1.1.0",
  "tracing",
  "ttl_cache",
@@ -1517,6 +1519,21 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tower-service",
+]
+
+[[package]]
+name = "hyper-tungstenite"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aee7ba11c4933715ee2c2fea1d8932f19356d31648c0a1bb65223ef5d7962c4c"
+dependencies = [
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "pin-project-lite",
+ "tokio",
+ "tokio-tungstenite",
+ "tungstenite",
 ]
 
 [[package]]
@@ -2687,9 +2704,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207"
+checksum = "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
 dependencies = [
  "chacha20",
  "getrandom 0.4.3",
@@ -3242,7 +3259,7 @@ dependencies = [
  "chrono",
  "futures",
  "pem",
- "rand 0.10.1",
+ "rand 0.10.2",
  "rcgen",
  "reqwest 0.13.4",
  "rustls",
@@ -3335,7 +3352,7 @@ dependencies = [
  "chrono",
  "hex",
  "num-traits",
- "rand 0.10.1",
+ "rand 0.10.2",
  "serde",
  "sqlx",
  "thiserror 2.0.18",
@@ -3858,6 +3875,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-tungstenite"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17a073bfed563fa236697a068031408a93cd9522e08abf9933ead3e73411bd71"
+dependencies = [
+ "futures-util",
+ "log",
+ "tokio",
+ "tungstenite",
+]
+
+[[package]]
 name = "tokio-util"
 version = "0.7.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4166,6 +4195,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4189890526f0168710b6ee65ceaedf1460c48a14318ceec933cb26baa492096a"
 dependencies = [
  "linked-hash-map",
+]
+
+[[package]]
+name = "tungstenite"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e48ac77174b19c110a50ab2128b24215ac9cb40e0e12e093fb602d175c569d22"
+dependencies = [
+ "bytes",
+ "data-encoding",
+ "http",
+ "httparse",
+ "log",
+ "rand 0.10.2",
+ "sha1 0.11.0",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

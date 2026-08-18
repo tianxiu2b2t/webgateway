@@ -23,7 +23,7 @@ runs:
           export cargo_mode=""
           export cargo_build_dir="debug"
         fi
-        
+          
         cargo build $cargo_mode --bin dashboard --bin gateway --bin webgateway-mnt
 
         mkdir builds

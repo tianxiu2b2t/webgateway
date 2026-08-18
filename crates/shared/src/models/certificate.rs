@@ -277,8 +277,8 @@ fn check_match(fullchain: &str, prikey: &str) -> anyhow::Result<()> {
     let privkey_pubkey_raw = key_pair.public_key_raw();
 
     // 3. 比较裸公钥
-    println!("cert_pubkey_raw: {:?}", cert_pubkey_raw);
-    println!("privkey_pubkey_raw: {:?}", privkey_pubkey_raw);
+    // println!("cert_pubkey_raw: {:?}", cert_pubkey_raw);
+    // println!("privkey_pubkey_raw: {:?}", privkey_pubkey_raw);
     if cert_pubkey_raw.as_slice() == privkey_pubkey_raw {
         Ok(())
     } else {

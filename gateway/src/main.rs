@@ -10,10 +10,11 @@ pub mod access;
 pub mod config;
 pub mod dns;
 pub mod foundation;
-pub mod proxy;
+// pub mod proxy;
 pub mod state;
 pub mod sync;
 pub mod transport;
+pub mod upstream;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

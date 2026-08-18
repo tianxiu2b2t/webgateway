@@ -158,7 +158,7 @@ impl DatabaseCertificateModifiyRepository for Database {
                 .await?
             },
             CreateCertificateMethod::MANUAL(context) => {
-                println!("test");
+                // println!("test");
                 sqlx::query_as::<_, DatabaseCertificate>(
                     r#"
                     INSERT INTO certificates (id, name, hostnames, fullchain, private_key, expires_at) VALUES ($1, $2, $3, $4, $5, $6)
